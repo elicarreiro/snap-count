@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0E1512" />
+<link rel="manifest" href="./manifest.webmanifest" />
+<link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+<meta name="apple-mobile-web-app-title" content="Snap Count" />
+<title>Snap Count — Sideline Play Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg:#0E1512;
+    --surface:#161F1A;
+    --surface-2:#1E2A23;
+    --line:#2A3830;
+    --chalk:#F4F6F1;
+    --muted:#8FA396;
+    --flag:#FFD23F;
+    --red:#E4572E;
+    --orange:#F2A93B;
+    --green:#4CAF6D;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--chalk);
+    font-family:'Inter',system-ui,-apple-system,sans-serif; overscroll-behavior:none; height:100%;}
+  #app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;}
+
+  button{font-family:inherit; cursor:pointer;}
+  input{font-family:inherit;}
+
+  .hdr{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+    padding:12px 14px 10px;}
+  .hdr-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .brand{display:flex;flex-direction:column;line-height:1.1;}
+  .brand b{font-family:'Oswald';font-weight:700;font-size:19px;letter-spacing:.3px;}
+  .brand span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+  .iconbtn{width:40px;height:40px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);
+    color:var(--chalk);display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .iconbtn:active{transform:scale(.94);}
+  .hdr-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+  .copybtn{padding:0 12px;height:40px;border-radius:10px;background:var(--surface-2);
+    border:1px solid var(--line);color:var(--chalk);font-size:12.5px;font-weight:600;white-space:nowrap;}
+  .copybtn:active{transform:scale(.95);}
+
+  .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:60;
+    background:var(--chalk);color:#10180F;padding:10px 16px;border-radius:22px;
+    font-size:13.5px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.45);}
+  .overlay{position:fixed;inset:0;z-index:70;background:rgba(6,10,8,.78);
+    display:flex;align-items:center;justify-content:center;padding:18px;}
+  .overlay .sheet{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--line);
+    border-radius:14px;padding:14px;}
+  .overlay p{margin:0 0 10px;font-size:12.5px;color:var(--muted);line-height:1.5;}
+  .overlay textarea{width:100%;height:220px;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:9px;color:var(--chalk);padding:10px;font-size:12.5px;
+    font-family:ui-monospace,Menlo,monospace;white-space:pre;resize:vertical;}
+  .overlay .impbtn{width:100%;margin-top:10px;padding:11px;border-radius:9px;background:var(--flag);
+    color:#1A1300;border:none;font-weight:700;font-size:14px;}
+
+  .status{margin-top:10px;border-radius:12px;padding:10px 12px;font-family:'Oswald';font-weight:600;
+    font-size:15px;display:flex;align-items:center;justify-content:space-between;border:1.5px solid transparent;
+    transition:background .15s;}
+  .status.short{background:rgba(228,87,46,.16);color:var(--red);border-color:rgba(228,87,46,.4);}
+  .status.ready{background:rgba(76,175,109,.16);color:var(--green);border-color:rgba(76,175,109,.4);}
+  .status .n{font-size:20px;}
+  .statusright{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+  .status .clear-btn{padding:6px 10px;border-radius:8px;background:rgba(255,255,255,.08);
+    border:1px solid currentColor;color:inherit;font-family:'Inter';font-size:11.5px;font-weight:700;
+    white-space:nowrap;opacity:.85;}
+  .status .clear-btn:active{transform:scale(.95);}
+  .status.flash{animation:shake .3s;}
+  @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
+
+  .lineup-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:10px 14px 0;}
+  .lu-btn{padding:9px 0;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);
+    color:var(--chalk);font-family:'Oswald';font-weight:600;font-size:13px;}
+  .lu-btn small{display:block;font-family:'Inter';font-weight:600;font-size:9px;color:var(--muted);margin-top:1px;}
+  .lu-btn:active{transform:scale(.95);}
+  .lu-btn.off{color:var(--muted);opacity:.55;}
+  .lu-btn.active{background:var(--flag);border-color:var(--flag);color:#1A1300;opacity:1;}
+  .lu-btn.active small{color:#1A1300;opacity:.7;}
+
+  .toolrow{display:flex;align-items:center;gap:6px;padding:10px 14px 12px;}
+  .toolrow .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-right:2px;}
+  .sort-btn{flex:1;padding:8px 4px;border-radius:8px;background:transparent;border:1px solid var(--line);
+    color:var(--muted);font-size:12px;font-weight:600;}
+  .sort-btn.active{background:var(--flag);color:#1A1300;border-color:var(--flag);}
+
+  .list{flex:1;overflow-y:auto;padding:2px 12px 150px;}
+  .empty{text-align:center;color:var(--muted);padding:60px 20px;font-size:14px;line-height:1.6;}
+  .empty b{color:var(--chalk);}
+
+  .row{display:flex;align-items:center;gap:10px;background:var(--surface);border:2px solid var(--line);
+    border-radius:13px;padding:10px 12px;margin-bottom:8px;}
+  .row.sel{border-color:var(--flag);background:var(--surface-2);}
+  .jersey{font-family:'Oswald';font-weight:700;font-size:19px;width:36px;text-align:center;color:var(--muted);
+    flex-shrink:0;}
+  .row.sel .jersey{color:var(--flag);}
+  .pinfo{flex:1;min-width:0;}
+  .pname{font-weight:600;font-size:15.5px;display:flex;align-items:baseline;gap:7px;min-width:0;}
+  .pname > .need{flex-shrink:0;}
+  .nametext{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
+  .need{font-size:11.5px;font-weight:500;color:var(--muted);opacity:.8;white-space:nowrap;}
+  .need.done{color:var(--green);opacity:1;font-weight:600;}
+  .yardbar{width:100%;max-width:150px;height:6px;background:var(--line);border-radius:3px;margin-top:6px;
+    position:relative;overflow:hidden;}
+  .yardbar .fill{height:100%;border-radius:3px;transition:width .2s;}
+  .fill.red{background:var(--red);} .fill.orange{background:var(--orange);} .fill.green{background:var(--green);}
+  .countwrap{text-align:right;flex-shrink:0;min-width:44px;}
+  .count{font-family:'Oswald';font-weight:700;font-size:24px;line-height:1;}
+  .count.red{color:var(--red);} .count.orange{color:var(--orange);} .count.green{color:var(--green);}
+  .countlbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+
+  .footer{position:sticky;bottom:0;display:flex;gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+    background:var(--surface);border-top:1px solid var(--line);}
+  .btn-undo{flex:0 0 84px;border-radius:13px;background:var(--surface-2);border:1px solid var(--line);
+    color:var(--chalk);font-weight:700;font-size:14px;}
+  .btn-undo:disabled{opacity:.35;}
+  .btn-undo:active:not(:disabled){transform:scale(.96);}
+  .btn-snap{flex:1;border-radius:15px;background:var(--flag);color:#1A1300;font-family:'Oswald';
+    font-weight:700;font-size:21px;letter-spacing:.4px;border:none;}
+  .btn-snap:disabled{opacity:.35;}
+  .btn-snap:active:not(:disabled){transform:scale(.98);}
+
+  /* settings */
+  .summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 14px 4px;}
+  .schip{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 4px;text-align:center;}
+  .schip.full{border-color:var(--green);}
+  .schip.over{border-color:var(--red);color:var(--red);}
+  .schip.over span{color:var(--red);opacity:.85;}
+  .schip b{display:block;font-family:'Oswald';font-size:15px;}
+  .schip span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  .newgame{margin:6px 14px 4px;padding:10px;border-radius:10px;background:transparent;border:1px dashed var(--line);
+    color:var(--muted);font-size:12.5px;font-weight:600;width:calc(100% - 28px);}
+  .sheetbox{margin:0 14px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;}
+  .sheetbox p{margin:0 0 8px;font-size:12px;color:var(--muted);line-height:1.5;}
+  .sheetbox .row1{display:flex;gap:8px;}
+  .sheetbox input{flex:1;min-width:0;background:var(--surface-2);border:1px solid var(--line);border-radius:9px;
+    color:var(--chalk);padding:9px 10px;font-size:12.5px;}
+  .sheetbox .impbtn{padding:9px 14px;border-radius:9px;background:var(--flag);color:#1A1300;border:none;
+    font-weight:700;font-size:13px;white-space:nowrap;}
+  .sheetbox .impbtn.wide{width:100%;margin-top:8px;padding:11px;font-size:14px;}
+  .sheetbox .impbtn.danger{background:var(--red);color:#fff;}
+  .sheetbox .impbtn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);}
+  .newgame.danger{border-style:solid;border-color:var(--red);color:var(--red);}
+  .sheetbox textarea{width:100%;min-height:96px;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:9px;color:var(--chalk);padding:9px 10px;font-size:12.5px;font-family:ui-monospace,Menlo,monospace;
+    resize:vertical;white-space:pre;}
+  .sheetbox .openlink{display:inline-block;margin-top:8px;font-size:11.5px;color:var(--muted);text-decoration:underline;}
+  .impmsg{margin-top:9px;font-size:12px;font-weight:600;line-height:1.5;}
+  .impmsg.ok{color:var(--green);}
+  .impmsg.err{color:var(--red);}
+  .addform{display:flex;gap:8px;padding:14px 14px 8px;}
+  .addform input{background:var(--surface-2);border:1px solid var(--line);border-radius:9px;color:var(--chalk);
+    padding:10px;font-size:14px;}
+  .addform input.num{width:64px;text-align:center;}
+  .addform input.nm{flex:1;min-width:0;}
+  .addform button{padding:10px 14px;border-radius:9px;background:var(--flag);color:#1A1300;border:none;
+    font-weight:700;font-size:14px;}
+  .srow{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:0 14px 8px;}
+  .srow-top{display:flex;align-items:center;gap:8px;}
+  .srow input{background:var(--surface-2);border:1px solid var(--line);border-radius:8px;color:var(--chalk);
+    padding:8px;font-size:14px;}
+  .srow input.num{width:52px;text-align:center;flex-shrink:0;}
+  .srow input.nm{flex:1;min-width:0;}
+  .delbtn{width:32px;height:32px;border-radius:8px;background:transparent;border:1px solid var(--line);
+    color:var(--red);flex-shrink:0;font-size:15px;}
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;}
+  .chip{padding:6px 11px;border-radius:20px;border:1px solid var(--line);font-size:11.5px;font-weight:700;
+    color:var(--muted);background:transparent;}
+  .chip.on{background:var(--flag);color:#1A1300;border-color:var(--flag);}
+  .chip.disabled{opacity:.3;}
+  .backrow{display:flex;align-items:center;gap:10px;}
+  .backbtn{width:36px;height:36px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);
+    color:var(--chalk);font-size:16px;}
+  .sectitle{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:14px 14px 2px;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+(function(){
+  // ---------- storage abstraction (Claude artifact storage -> localStorage -> memory) ----------
+  var mem = null;
+  var storage = {
+    async get(){
+      try{
+        if (window.storage && window.storage.get){
+          var r = await window.storage.get('snapcount-state', false);
+          return r ? r.value : null;
+        }
+      }catch(e){}
+      try{ return localStorage.getItem('snapcount-state'); }catch(e){}
+      return mem;
+    },
+    async set(v){
+      mem = v;
+      try{
+        if (window.storage && window.storage.set){
+          await window.storage.set('snapcount-state', v, false);
+          return;
+        }
+      }catch(e){}
+      try{ localStorage.setItem('snapcount-state', v); }catch(e){}
+    }
+  };
+
+  var LINEUPS = ['O1','O2','O3','D1','D2','D3'];
+
+  var DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1lYdP_u_sS_RB4D9PMhNPjpbw96adf2AkMtuVQLjBzn4/edit?gid=1279709354#gid=1279709354';
+
+  var state = {
+    screen: 'main',
+    sortMode: 'plays',
+    players: [],
+    selected: [],
+    history: [],
+    sheetUrl: DEFAULT_SHEET_URL
+  };
+
+  var importMsg = null; // { text, ok } — transient, not persisted
+  var pasteDraft = '';  // keeps textarea contents across re-renders
+  var pendingAction = null; // 'import' | 'newgame' — in-app confirm, since sandboxed pages block confirm()
+  var copyFallback = null;  // report text shown for manual copying if clipboard access is blocked
+  var toastMsg = null;
+  var toastTimer = null;
+
+  function toast(msg){
+    toastMsg = msg;
+    render();
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastMsg = null; render(); }, 2200);
+  }
+
+  // Plain-text report, matching the on-screen sort order, aligned so it stays readable when pasted
+  function buildReport(){
+    var date = new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+    var list = sortedPlayers();
+    var numW = Math.max.apply(null, list.map(function(p){ return ('#'+(p.number||'')).length; }).concat([2]));
+    var nameW = Math.max.apply(null, list.map(function(p){ return p.name.length; }).concat([4]));
+    var lines = list.map(function(p){
+      var num = ('#' + (p.number || '')).padEnd(numW);
+      var nm = p.name.padEnd(nameW);
+      return num + '  ' + nm + '  ' + String(p.plays).padStart(2) + (p.plays < 14 ? '' : '  \u2713');
+    });
+    return 'Wilton Warrior Play Counts\n' + date + '\n\n' + lines.join('\n');
+  }
+
+  // Parses CSV or TSV (tab-separated, which is what copying cells out of Sheets gives you)
+  function parseDelimited(text){
+    var delim = (text.split('\n')[0] || '').indexOf('\t') > -1 ? '\t' : ',';
+    var rows=[], row=[], field='', inQuotes=false;
+    for (var i=0;i<text.length;i++){
+      var c=text[i];
+      if (inQuotes){
+        if (c==='"'){ if (text[i+1]==='"'){ field+='"'; i++; } else { inQuotes=false; } }
+        else field+=c;
+      } else {
+        if (c==='"') inQuotes=true;
+        else if (c===delim){ row.push(field); field=''; }
+        else if (c==='\n'){ row.push(field); rows.push(row); row=[]; field=''; }
+        else if (c==='\r'){ /* skip */ }
+        else field+=c;
+      }
+    }
+    if (field.length || row.length){ row.push(field); rows.push(row); }
+    return rows.filter(function(r){ return r.some(function(f){ return f.trim()!==''; }); });
+  }
+
+  // Builds the roster to exactly match the imported rows. Players not in the sheet are
+  // dropped; lineup assignments come only from the sheet. Play counts carry over for any
+  // jersey number that's still present, so a mid-game re-import doesn't lose counts.
+  function replaceFromRows(header, dataRows, getCell){
+    var idxNum = header.findIndex(function(h){ return h.indexOf('jersey')>-1 || h==='#' || h==='number'; });
+    var idxName = header.findIndex(function(h){ return h.indexOf('name')>-1; });
+    if (idxName === -1) throw new Error('no-name-col');
+    var idxLineup = {};
+    LINEUPS.forEach(function(k){ idxLineup[k] = header.findIndex(function(h){ return h === k.toLowerCase(); }); });
+
+    var oldPlayers = state.players;
+    var next = [];
+    var kept = 0;
+    dataRows.forEach(function(r){
+      var name = getCell(r, idxName);
+      if (!name) return;
+      var number = idxNum > -1 ? getCell(r, idxNum) : '';
+      var prior = number ? oldPlayers.find(function(p){ return p.number === number; }) : null;
+      if (prior) kept++;
+      var p = { id: prior ? prior.id : uid(), number: number, name: name, plays: prior ? prior.plays : 0 };
+      LINEUPS.forEach(function(k){
+        var ci = idxLineup[k];
+        p[k] = ci > -1 && getCell(r, ci) !== '';
+      });
+      next.push(p);
+    });
+    if (!next.length) throw new Error('No player rows found');
+
+    var removed = oldPlayers.length - kept;
+    state.players = next;
+    var validIds = {};
+    next.forEach(function(p){ validIds[p.id] = true; });
+    state.selected = state.selected.filter(function(id){ return validIds[id]; });
+
+    // The sheet is the source of truth, so we import what it says — but a lineup with
+    // more than 11 can't take the field, so flag it rather than fixing it silently.
+    var over = [];
+    LINEUPS.forEach(function(k){
+      var n = next.filter(function(p){ return p[k]; }).length;
+      if (n > 11) over.push(k + ' has ' + n);
+    });
+
+    return { total: next.length, kept: kept, added: next.length - kept, removed: removed, over: over };
+  }
+
+  function uid(){ return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+  var saveTimer = null;
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(function(){ storage.set(JSON.stringify(state)); }, 250);
+  }
+
+  function find(id){ return state.players.find(function(p){ return p.id === id; }); }
+
+  // Warning text appended to an import result when a lineup exceeds 11
+  function overNote(r){
+    if (!r.over || !r.over.length) return '';
+    return ' \u26A0 Over the 11-player limit: ' + r.over.join(', ') + '. Fix it in the sheet and re-import, or unassign players in the roster below.';
+  }
+
+  // True when the on-field selection is exactly this lineup's members — no more, no fewer
+  function lineupIsSelected(key){
+    var members = state.players.filter(function(p){ return p[key]; });
+    if (!members.length || members.length !== state.selected.length) return false;
+    return members.every(function(p){ return state.selected.indexOf(p.id) > -1; });
+  }
+
+  function statusColor(plays){
+    if (plays >= 14) return 'green';
+    if (plays >= 10) return 'orange';
+    return 'red';
+  }
+
+  function sortedPlayers(){
+    var arr = state.players.slice();
+    if (state.sortMode === 'plays'){
+      arr.sort(function(a,b){ return (a.plays - b.plays) || ((parseInt(a.number)||9999) - (parseInt(b.number)||9999)); });
+    } else if (state.sortMode === 'jersey'){
+      arr.sort(function(a,b){ return (parseInt(a.number)||9999) - (parseInt(b.number)||9999); });
+    } else {
+      arr.sort(function(a,b){ return a.name.localeCompare(b.name); });
+    }
+    return arr;
+  }
+
+  // ---------- actions ----------
+  var app = {
+    goSettings: function(){ state.screen = 'settings'; render(); },
+    goMain: function(){ state.screen = 'main'; render(); },
+
+    toggleSelect: function(id){
+      var idx = state.selected.indexOf(id);
+      if (idx > -1){ state.selected.splice(idx,1); }
+      else {
+        if (state.selected.length >= 11){ flashStatus(); return; }
+        state.selected.push(id);
+      }
+      scheduleSave(); render();
+    },
+    batchSelect: function(key){
+      state.selected = state.players.filter(function(p){ return p[key]; }).map(function(p){ return p.id; });
+      scheduleSave(); render();
+    },
+    clearSelection: function(){ state.selected = []; scheduleSave(); render(); },
+    setSort: function(mode){ state.sortMode = mode; render(); },
+
+    copyReport: async function(){
+      if (!state.players.length){
+        toast('No players on the roster yet.');
+        return;
+      }
+      var text = buildReport();
+      try{
+        if (navigator.clipboard && navigator.clipboard.writeText){
+          await navigator.clipboard.writeText(text);
+          toast('Play counts copied');
+          return;
+        }
+        throw new Error('clipboard api unavailable');
+      } catch(e){
+        // Fall back to the old execCommand path, which works in more sandboxes
+        try{
+          var ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly','');
+          ta.style.position = 'fixed';
+          ta.style.top = '0';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          ta.setSelectionRange(0, text.length);
+          var ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          if (ok){ toast('Play counts copied'); return; }
+        } catch(e2){}
+        // Last resort: show the text so it can be selected and copied by hand
+        copyFallback = text;
+        render();
+      }
+    },
+    closeCopyFallback: function(){ copyFallback = null; render(); },
+
+    importFromSheet: async function(){
+      var input = document.getElementById('sheet-url');
+      var url = (input ? input.value : state.sheetUrl).trim();
+      state.sheetUrl = url;
+      var m = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+      if (!m){
+        pendingAction = null;
+        importMsg = { text: 'That doesn\u2019t look like a Google Sheets link.', ok: false, scope: 'fetch' };
+        render(); return;
+      }
+      if (state.players.length && pendingAction !== 'fetch'){
+        pendingAction = 'fetch';
+        importMsg = { text: 'This replaces the roster and lineups with the sheet. Play counts are kept for jersey numbers still on it. Tap again to confirm.', ok: null, scope: 'fetch' };
+        render(); return;
+      }
+      importMsg = { text: 'Fetching from sheet\u2026', ok: null, scope: 'fetch' };
+      render();
+
+      var id = m[1];
+      // Google sends no CORS headers, so a browser can't read the sheet directly.
+      // opensheet.elk.sh fetches it server-side and returns JSON with CORS allowed.
+      var attempts = [
+        'https://opensheet.elk.sh/' + id + '/1',
+        'https://opensheet.elk.sh/' + id + '/Roster'
+      ];
+      var lastErr = 'request blocked';
+
+      for (var i = 0; i < attempts.length; i++){
+        try{
+          var res = await fetch(attempts[i]);
+          if (!res.ok){
+            var why = res.status === 404 ? 'tab not found' : ('HTTP ' + res.status);
+            throw new Error(why);
+          }
+          var data = await res.json();
+          if (data && data.error) throw new Error(String(data.error));
+          if (!Array.isArray(data) || !data.length) throw new Error('sheet had no player rows');
+
+          // The relay omits keys for empty cells, so a column that's blank on the first
+          // row would go missing. Union the keys across every row to catch them all.
+          var keys = [];
+          data.forEach(function(row){
+            Object.keys(row).forEach(function(k){
+              if (keys.indexOf(k) === -1) keys.push(k);
+            });
+          });
+          var header = keys.map(function(k){ return k.trim().toLowerCase(); });
+          var r = replaceFromRows(header, data, function(row, idx){
+            if (idx < 0) return '';
+            var v = row[keys[idx]];
+            return v == null ? '' : String(v).trim();
+          });
+          pendingAction = null;
+          scheduleSave();
+          importMsg = { text: 'Roster replaced from sheet: ' + r.total + ' player' + (r.total===1?'':'s') + ' (' + r.added + ' new, ' + r.kept + ' kept with play counts, ' + r.removed + ' removed).' + overNote(r), ok: r.over.length ? null : true, scope: 'fetch' };
+          render();
+          return;
+        } catch(e){
+          lastErr = (e && e.message) ? e.message : 'request blocked';
+        }
+      }
+
+      pendingAction = null;
+      importMsg = { text: 'Couldn\u2019t reach the sheet (' + lastErr + '). Make sure it\u2019s shared as \u201cAnyone with the link can view.\u201d If this page can\u2019t make outside requests, use the paste method above \u2014 it always works.', ok: false, scope: 'fetch' };
+      render();
+    },
+
+    snap: function(){
+      if (!state.selected.length) return;
+      if (state.selected.length > 11){ flashStatus(); return; }
+      state.history.push({ ids: state.selected.slice() });
+      if (state.history.length > 50) state.history.shift();
+      state.selected.forEach(function(id){
+        var p = find(id); if (p) p.plays += 1;
+      });
+      scheduleSave(); render();
+    },
+    undo: function(){
+      if (!state.history.length) return;
+      var last = state.history.pop();
+      last.ids.forEach(function(id){
+        var p = find(id); if (p) p.plays = Math.max(0, p.plays - 1);
+      });
+      scheduleSave(); render();
+    },
+
+    addPlayer: function(){
+      var numEl = document.getElementById('new-number');
+      var nmEl = document.getElementById('new-name');
+      var name = nmEl.value.trim();
+      if (!name) { nmEl.focus(); return; }
+      var p = { id: uid(), number: numEl.value.trim(), name: name, plays: 0 };
+      LINEUPS.forEach(function(k){ p[k] = false; });
+      state.players.push(p);
+      numEl.value = ''; nmEl.value = '';
+      scheduleSave(); render();
+      var nn = document.getElementById('new-number'); if (nn) nn.focus();
+    },
+    removePlayer: function(id){
+      state.players = state.players.filter(function(p){ return p.id !== id; });
+      state.selected = state.selected.filter(function(x){ return x !== id; });
+      scheduleSave(); render();
+    },
+    toggleLineup: function(id, key){
+      var p = find(id); if (!p) return;
+      if (!p[key]){
+        var count = state.players.filter(function(pp){ return pp[key]; }).length;
+        if (count >= 11) return;
+        p[key] = true;
+      } else { p[key] = false; }
+      scheduleSave(); render();
+    },
+    newGame: function(){
+      if (pendingAction !== 'newgame'){
+        pendingAction = 'newgame';
+        importMsg = null;
+        render(); return;
+      }
+      state.players.forEach(function(p){ p.plays = 0; });
+      state.selected = [];
+      state.history = [];
+      pendingAction = null;
+      scheduleSave(); render();
+    },
+
+    cancelPending: function(){ pendingAction = null; render(); },
+
+    importPaste: function(){
+      var ta = document.getElementById('paste-data');
+      if (ta) pasteDraft = ta.value;
+      var text = pasteDraft.trim();
+      if (!text){
+        pendingAction = null;
+        importMsg = { text: 'Paste your roster rows into the box first.', ok: false, scope: 'paste' };
+        render(); return;
+      }
+      if (state.players.length && pendingAction !== 'import'){
+        pendingAction = 'import';
+        importMsg = { text: 'This removes anyone not in the paste and resets lineups to match the sheet. Play counts are kept for jersey numbers still on the roster. Tap Import again to confirm.', ok: null, scope: 'paste' };
+        render(); return;
+      }
+      try{
+        var rows = parseDelimited(text);
+        if (rows.length < 2) throw new Error('Need a header row plus at least one player');
+        var header = rows[0].map(function(h){ return h.trim().toLowerCase(); });
+        if (!header.some(function(h){ return h.indexOf('name')>-1; })) throw new Error('No "Name" column found in the first row \u2014 include the header row when you copy');
+        var r = replaceFromRows(header, rows.slice(1), function(row, idx){
+          return idx < 0 ? '' : (row[idx] || '').trim();
+        });
+        pendingAction = null;
+        pasteDraft = '';
+        scheduleSave();
+        importMsg = { text: 'Roster replaced: ' + r.total + ' player' + (r.total===1?'':'s') + ' (' + r.added + ' new, ' + r.kept + ' kept with play counts, ' + r.removed + ' removed).' + overNote(r), ok: r.over.length ? null : true, scope: 'paste' };
+        render();
+      } catch(e){
+        pendingAction = null;
+        importMsg = { text: 'Couldn\u2019t read that: ' + ((e && e.message) ? e.message : 'unrecognized format') + '.', ok: false, scope: 'paste' };
+        render();
+      }
+    }
+  };
+  window.app = app;
+
+  function flashStatus(){
+    var el = document.querySelector('.status');
+    if (!el) return;
+    el.classList.add('flash');
+    setTimeout(function(){ el.classList.remove('flash'); }, 300);
+  }
+
+  // ---------- render ----------
+  function esc(s){ return (s||'').toString().replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  }); }
+
+  function renderMain(){
+    var count = state.selected.length;
+    var statusCls = count === 11 ? 'ready' : 'short';
+    var statusTxt = count === 11
+      ? '&#10003; 11 selected — Ready'
+      : count > 11
+        ? (count + '/11 selected — ' + (count - 11) + ' too many')
+        : (count + '/11 selected — ' + (11 - count) + ' short');
+
+    var luButtons = LINEUPS.map(function(k){
+      var n = state.players.filter(function(p){ return p[k]; }).length;
+      var cls = 'lu-btn' + (n===0 ? ' off' : '') + (lineupIsSelected(k) ? ' active' : '');
+      return '<button class="' + cls + '" onclick="app.batchSelect(\'' + k + '\')">' + k +
+        '<small>' + n + '</small></button>';
+    }).join('');
+
+    var players = sortedPlayers();
+    var listHtml;
+    if (!players.length){
+      listHtml = '<div class="empty">No players yet.<br>Tap <b>&#9881;</b> above to build your roster.</div>';
+    } else {
+      listHtml = players.map(function(p){
+        var sel = state.selected.indexOf(p.id) > -1;
+        var col = statusColor(p.plays);
+        var pct = Math.min(100, (p.plays/14)*100);
+        var need = 14 - p.plays;
+        var needTxt = need <= 0
+          ? '<span class="need done">&#10003; Done</span>'
+          : '<span class="need">' + need + ' more</span>';
+        return '<div class="row ' + (sel?'sel':'') + '" onclick="app.toggleSelect(\'' + p.id + '\')">' +
+          '<div class="jersey">' + esc(p.number||'—') + '</div>' +
+          '<div class="pinfo">' +
+            '<div class="pname"><span class="nametext">' + esc(p.name) + '</span>' + needTxt + '</div>' +
+            '<div class="yardbar"><div class="fill ' + col + '" style="width:' + pct + '%"></div></div>' +
+          '</div>' +
+          '<div class="countwrap"><div class="count ' + col + '">' + p.plays + '</div><div class="countlbl">plays</div></div>' +
+        '</div>';
+      }).join('');
+    }
+
+    document.getElementById('app').innerHTML =
+      '<div class="hdr">' +
+        '<div class="hdr-row">' +
+          '<div class="brand"><b>SNAP COUNT</b><span>Sideline Play Tracker</span></div>' +
+          '<div class="hdr-actions">' +
+            '<button class="copybtn" onclick="app.copyReport()">Copy counts</button>' +
+            '<button class="iconbtn" onclick="app.goSettings()">&#9881;</button>' +
+          '</div>' +
+        '</div>' +
+        '<div class="status ' + statusCls + '">' +
+          '<span>' + statusTxt + '</span>' +
+          '<span class="statusright">' +
+            '<span class="n">' + count + '/11</span>' +
+            (count ? '<button class="clear-btn" onclick="app.clearSelection()">Clear Selection</button>' : '') +
+          '</span>' +
+        '</div>' +
+        '<div class="lineup-grid">' + luButtons + '</div>' +
+        '<div class="toolrow">' +
+          '<span class="lbl">Sort</span>' +
+          '<button class="sort-btn ' + (state.sortMode==='plays'?'active':'') + '" onclick="app.setSort(\'plays\')">Plays</button>' +
+          '<button class="sort-btn ' + (state.sortMode==='jersey'?'active':'') + '" onclick="app.setSort(\'jersey\')">#</button>' +
+          '<button class="sort-btn ' + (state.sortMode==='name'?'active':'') + '" onclick="app.setSort(\'name\')">Name</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="list">' + listHtml + '</div>' +
+      '<div class="footer">' +
+        '<button class="btn-undo" ' + (state.history.length?'':'disabled') + ' onclick="app.undo()">Undo</button>' +
+        '<button class="btn-snap" ' + (count && count <= 11 ? '' : 'disabled') + ' onclick="app.snap()">' +
+          (count > 11 ? 'TOO MANY' : 'SNAP') +
+        '</button>' +
+      '</div>';
+  }
+
+  function renderSettings(){
+    var summary = LINEUPS.map(function(k){
+      var n = state.players.filter(function(p){ return p[k]; }).length;
+      return '<div class="schip ' + (n===11?'full':n>11?'over':'') + '"><b>' + n + '/11</b><span>' + k + '</span></div>';
+    }).join('');
+
+    var rows = state.players.slice().sort(function(a,b){
+      return (parseInt(a.number)||9999) - (parseInt(b.number)||9999);
+    }).map(function(p){
+      var chips = LINEUPS.map(function(k){
+        var on = p[k];
+        var full = !on && state.players.filter(function(pp){ return pp[k]; }).length >= 11;
+        return '<button class="chip ' + (on?'on':'') + (full?' disabled':'') + '" ' +
+          'onclick="app.toggleLineup(\'' + p.id + '\',\'' + k + '\')">' + k + '</button>';
+      }).join('');
+      return '<div class="srow">' +
+        '<div class="srow-top">' +
+          '<input class="num" data-id="' + p.id + '" data-field="number" value="' + esc(p.number) + '" placeholder="#" inputmode="numeric">' +
+          '<input class="nm" data-id="' + p.id + '" data-field="name" value="' + esc(p.name) + '" placeholder="Player name">' +
+          '<button class="delbtn" onclick="app.removePlayer(\'' + p.id + '\')">&#10005;</button>' +
+        '</div>' +
+        '<div class="chips">' + chips + '</div>' +
+      '</div>';
+    }).join('');
+
+    document.getElementById('app').innerHTML =
+      '<div class="hdr">' +
+        '<div class="backrow">' +
+          '<button class="backbtn" onclick="app.goMain()">&#8592;</button>' +
+          '<div class="brand"><b>ROSTER &amp; LINEUPS</b><span>Assign O1–O3 / D1–D3</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="summary">' + summary + '</div>' +
+      '<button class="newgame' + (pendingAction==='newgame'?' danger':'') + '" onclick="app.newGame()">' +
+        (pendingAction==='newgame' ? '\u26A0 Tap again to reset all play counts to 0' : '\u21BB Start new game (reset all play counts)') +
+      '</button>' +
+      (pendingAction==='newgame' ? '<button class="newgame" onclick="app.cancelPending()">Cancel</button>' : '') +
+      '<div class="sectitle">Import roster \u2014 paste from sheet</div>' +
+      '<div class="sheetbox">' +
+        '<p>In your sheet, select the roster <b style="color:var(--chalk)">including the header row</b> (Jersey #, Name, O1\u2013D3), copy, and paste below. This <b style="color:var(--chalk)">replaces</b> the roster and lineup assignments with whatever the sheet says \u2014 anyone not in the paste is removed. Play counts are kept for jersey numbers still on the roster.</p>' +
+        '<textarea id="paste-data" placeholder="Jersey #&#9;Name&#9;O1&#9;O2&#9;O3&#9;D1&#9;D2&#9;D3&#10;15&#9;Henry Carreiro&#9;x&#9;&#9;&#9;x">' + esc(pasteDraft) + '</textarea>' +
+        '<button class="impbtn wide' + (pendingAction==='import'?' danger':'') + '" onclick="app.importPaste()">' +
+          (pendingAction==='import' ? '\u26A0 Tap again to replace roster' : 'Import pasted roster') +
+        '</button>' +
+        (pendingAction==='import' ? '<button class="impbtn wide ghost" onclick="app.cancelPending()">Cancel</button>' : '') +
+        (importMsg && importMsg.scope === 'paste' ? '<div class="impmsg ' + (importMsg.ok===true?'ok':importMsg.ok===false?'err':'') + '">' + importMsg.text + '</div>' : '') +
+      '</div>' +
+      '<div class="sectitle">Your sheet</div>' +
+      '<div class="sheetbox">' +
+        '<p>Pulls the roster straight from the sheet. Must be shared as \u201cAnyone with the link can view,\u201d roster on the first tab. Google blocks direct browser reads, so this goes through <b style="color:var(--chalk)">opensheet.elk.sh</b>, a free open-source relay \u2014 your roster passes through their server on the way here.</p>' +
+        '<div class="row1">' +
+          '<input id="sheet-url" value="' + esc(state.sheetUrl) + '" placeholder="Google Sheet link">' +
+        '</div>' +
+        '<button class="impbtn wide' + (pendingAction==='fetch'?' danger':'') + '" onclick="app.importFromSheet()">' +
+          (pendingAction==='fetch' ? '\u26A0 Tap again to replace roster' : 'Import directly from sheet') +
+        '</button>' +
+        (pendingAction==='fetch' ? '<button class="impbtn wide ghost" onclick="app.cancelPending()">Cancel</button>' : '') +
+        (importMsg && importMsg.scope === 'fetch' ? '<div class="impmsg ' + (importMsg.ok===true?'ok':importMsg.ok===false?'err':'') + '">' + importMsg.text + '</div>' : '') +
+        '<a class="openlink" href="' + esc(state.sheetUrl) + '" target="_blank" rel="noopener">Open sheet &#8599;</a>' +
+      '</div>' +
+      '<div class="sectitle">Add player</div>' +
+      '<div class="addform">' +
+        '<input class="num" id="new-number" placeholder="#" inputmode="numeric">' +
+        '<input class="nm" id="new-name" placeholder="Player name" onkeydown="if(event.key===\'Enter\')app.addPlayer()">' +
+        '<button onclick="app.addPlayer()">Add</button>' +
+      '</div>' +
+      '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
+      '<div style="padding-bottom:40px">' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>';
+  }
+
+  function render(){
+    if (state.screen === 'settings') renderSettings();
+    else renderMain();
+
+    var extra = '';
+    if (toastMsg){
+      extra += '<div class="toast">' + esc(toastMsg) + '</div>';
+    }
+    if (copyFallback){
+      extra += '<div class="overlay">' +
+        '<div class="sheet">' +
+          '<p>Copying automatically was blocked here. Select the text below and copy it manually.</p>' +
+          '<textarea id="copy-out" readonly>' + esc(copyFallback) + '</textarea>' +
+          '<button class="impbtn wide" onclick="app.closeCopyFallback()">Close</button>' +
+        '</div>' +
+      '</div>';
+    }
+    if (extra){
+      document.getElementById('app').insertAdjacentHTML('beforeend', extra);
+      var out = document.getElementById('copy-out');
+      if (out){ out.focus(); out.select(); }
+    }
+  }
+
+  // delegated input listener so typing in roster fields never triggers a re-render (keeps focus/cursor intact)
+  document.getElementById('app').addEventListener('input', function(e){
+    var t = e.target;
+    if (t.matches && t.matches('[data-field]')){
+      var id = t.getAttribute('data-id');
+      var field = t.getAttribute('data-field');
+      var p = find(id);
+      if (p){ p[field] = t.value; scheduleSave(); }
+    }
+    if (t.id === 'sheet-url'){ state.sheetUrl = t.value; scheduleSave(); }
+    if (t.id === 'paste-data'){ pasteDraft = t.value; }
+  });
+
+  // ---------- init ----------
+  storage.get().then(function(raw){
+    if (raw){
+      try{
+        var loaded = JSON.parse(raw);
+        if (loaded && Array.isArray(loaded.players)){
+          state.players = loaded.players;
+          state.sortMode = loaded.sortMode || 'plays';
+          state.selected = Array.isArray(loaded.selected) ? loaded.selected : [];
+          state.history = Array.isArray(loaded.history) ? loaded.history : [];
+          state.sheetUrl = typeof loaded.sheetUrl === 'string' && loaded.sheetUrl ? loaded.sheetUrl : DEFAULT_SHEET_URL;
+        }
+      }catch(e){}
+    }
+    render();
+  }).catch(function(){ render(); });
+
+  // Enables offline use and makes Chrome offer "Install app". Silently skipped on file://.
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>
