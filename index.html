@@ -39,13 +39,15 @@
   .brand{display:flex;flex-direction:column;line-height:1.1;}
   .brand b{font-family:'Oswald';font-weight:700;font-size:19px;letter-spacing:.3px;}
   .brand span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
-  .iconbtn{width:40px;height:40px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);
-    color:var(--chalk);display:flex;align-items:center;justify-content:center;font-size:18px;}
+  .iconbtn{width:38px;height:38px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);
+    color:var(--chalk);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
   .iconbtn:active{transform:scale(.94);}
-  .hdr-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-  .copybtn{padding:0 12px;height:40px;border-radius:10px;background:var(--surface-2);
-    border:1px solid var(--line);color:var(--chalk);font-size:12.5px;font-weight:600;white-space:nowrap;}
-  .copybtn:active{transform:scale(.95);}
+  .hdr-actions{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+  .snaptally{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    min-width:46px;height:38px;padding:0 8px;border-radius:10px;background:var(--surface-2);
+    border:1px solid var(--line);line-height:1;}
+  .snaptally b{font-family:'Oswald';font-weight:700;font-size:17px;color:var(--flag);}
+  .snaptally span{font-size:8.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px;}
 
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:60;
     background:var(--chalk);color:#10180F;padding:10px 16px;border-radius:22px;
@@ -134,8 +136,12 @@
   .schip.over span{color:var(--red);opacity:.85;}
   .schip b{display:block;font-family:'Oswald';font-size:15px;}
   .schip span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
-  .newgame{margin:6px 14px 4px;padding:10px;border-radius:10px;background:transparent;border:1px dashed var(--line);
-    color:var(--muted);font-size:12.5px;font-weight:600;width:calc(100% - 28px);}
+  .newgame{margin:6px 14px 4px;padding:13px 10px;border-radius:11px;background:var(--orange);
+    border:none;color:#241500;font-family:'Oswald';font-weight:700;font-size:15px;letter-spacing:.3px;
+    width:calc(100% - 28px);}
+  .newgame:active{transform:scale(.98);}
+  .newgame.cancel{background:transparent;border:1px solid var(--line);color:var(--muted);
+    font-family:'Inter';font-weight:600;font-size:13px;padding:10px;letter-spacing:0;}
   .sheetbox{margin:0 14px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;}
   .sheetbox p{margin:0 0 8px;font-size:12px;color:var(--muted);line-height:1.5;}
   .sheetbox .row1{display:flex;gap:8px;}
@@ -146,7 +152,7 @@
   .sheetbox .impbtn.wide{width:100%;margin-top:8px;padding:11px;font-size:14px;}
   .sheetbox .impbtn.danger{background:var(--red);color:#fff;}
   .sheetbox .impbtn.ghost{background:transparent;border:1px solid var(--line);color:var(--muted);}
-  .newgame.danger{border-style:solid;border-color:var(--red);color:var(--red);}
+  .newgame.danger{background:var(--red);color:#fff;}
   .sheetbox textarea{width:100%;min-height:96px;background:var(--surface-2);border:1px solid var(--line);
     border-radius:9px;color:var(--chalk);padding:9px 10px;font-size:12.5px;font-family:ui-monospace,Menlo,monospace;
     resize:vertical;white-space:pre;}
@@ -220,6 +226,7 @@
     players: [],
     selected: [],
     history: [],
+    totalSnaps: 0,
     sheetUrl: DEFAULT_SHEET_URL
   };
 
@@ -490,6 +497,7 @@
       state.selected.forEach(function(id){
         var p = find(id); if (p) p.plays += 1;
       });
+      state.totalSnaps += 1;
       scheduleSave(); render();
     },
     undo: function(){
@@ -498,6 +506,7 @@
       last.ids.forEach(function(id){
         var p = find(id); if (p) p.plays = Math.max(0, p.plays - 1);
       });
+      state.totalSnaps = Math.max(0, state.totalSnaps - 1);
       scheduleSave(); render();
     },
 
@@ -536,6 +545,7 @@
       state.players.forEach(function(p){ p.plays = 0; });
       state.selected = [];
       state.history = [];
+      state.totalSnaps = 0;
       pendingAction = null;
       scheduleSave(); render();
     },
@@ -635,7 +645,13 @@
         '<div class="hdr-row">' +
           '<div class="brand"><b>SNAP COUNT</b><span>Sideline Play Tracker</span></div>' +
           '<div class="hdr-actions">' +
-            '<button class="copybtn" onclick="app.copyReport()">Copy counts</button>' +
+            '<div class="snaptally"><b>' + state.totalSnaps + '</b><span>snaps</span></div>' +
+            '<button class="iconbtn" onclick="app.copyReport()" aria-label="Copy play counts">' +
+              '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                '<rect x="9" y="9" width="11" height="11" rx="2"></rect>' +
+                '<path d="M5 15V5a2 2 0 0 1 2-2h10"></path>' +
+              '</svg>' +
+            '</button>' +
             '<button class="iconbtn" onclick="app.goSettings()">&#9881;</button>' +
           '</div>' +
         '</div>' +
@@ -699,10 +715,10 @@
       '<button class="newgame' + (pendingAction==='newgame'?' danger':'') + '" onclick="app.newGame()">' +
         (pendingAction==='newgame' ? '\u26A0 Tap again to reset all play counts to 0' : '\u21BB Start new game (reset all play counts)') +
       '</button>' +
-      (pendingAction==='newgame' ? '<button class="newgame" onclick="app.cancelPending()">Cancel</button>' : '') +
+      (pendingAction==='newgame' ? '<button class="newgame cancel" onclick="app.cancelPending()">Cancel</button>' : '') +
       '<div class="sectitle">Import roster \u2014 paste from sheet</div>' +
       '<div class="sheetbox">' +
-        '<p>In your sheet, select the roster <b style="color:var(--chalk)">including the header row</b> (Jersey #, Name, O1\u2013D3), copy, and paste below. This <b style="color:var(--chalk)">replaces</b> the roster and lineup assignments with whatever the sheet says \u2014 anyone not in the paste is removed. Play counts are kept for jersey numbers still on the roster.</p>' +
+        '<p>Copy the roster from your sheet, header row included. Replaces the current roster.</p>' +
         '<textarea id="paste-data" placeholder="Jersey #&#9;Name&#9;O1&#9;O2&#9;O3&#9;D1&#9;D2&#9;D3&#10;15&#9;Henry Carreiro&#9;x&#9;&#9;&#9;x">' + esc(pasteDraft) + '</textarea>' +
         '<button class="impbtn wide' + (pendingAction==='import'?' danger':'') + '" onclick="app.importPaste()">' +
           (pendingAction==='import' ? '\u26A0 Tap again to replace roster' : 'Import pasted roster') +
@@ -712,7 +728,7 @@
       '</div>' +
       '<div class="sectitle">Your sheet</div>' +
       '<div class="sheetbox">' +
-        '<p>Pulls the roster straight from the sheet. Must be shared as \u201cAnyone with the link can view,\u201d roster on the first tab. Google blocks direct browser reads, so this goes through <b style="color:var(--chalk)">opensheet.elk.sh</b>, a free open-source relay \u2014 your roster passes through their server on the way here.</p>' +
+        '<p>Sheet must be shared as \u201canyone with the link can view.\u201d Reads via opensheet.elk.sh.</p>' +
         '<div class="row1">' +
           '<input id="sheet-url" value="' + esc(state.sheetUrl) + '" placeholder="Google Sheet link">' +
         '</div>' +
@@ -780,6 +796,7 @@
           state.sortMode = loaded.sortMode || 'plays';
           state.selected = Array.isArray(loaded.selected) ? loaded.selected : [];
           state.history = Array.isArray(loaded.history) ? loaded.history : [];
+          state.totalSnaps = typeof loaded.totalSnaps === 'number' ? loaded.totalSnaps : 0;
           state.sheetUrl = typeof loaded.sheetUrl === 'string' && loaded.sheetUrl ? loaded.sheetUrl : DEFAULT_SHEET_URL;
         }
       }catch(e){}
