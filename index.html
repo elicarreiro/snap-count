@@ -185,6 +185,8 @@
   .chip.on{background:var(--flag);color:#1A1300;border-color:var(--flag);}
   .chip.disabled{opacity:.3;}
   .backrow{display:flex;align-items:center;gap:10px;}
+  .buildtag{text-align:center;color:var(--muted);opacity:.55;font-size:11px;padding:14px 0 44px;
+    letter-spacing:.06em;}
   .backbtn{width:36px;height:36px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);
     color:var(--chalk);font-size:16px;}
   .sectitle{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:14px 14px 2px;}
@@ -752,7 +754,8 @@
         '<button onclick="app.addPlayer()">Add</button>' +
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
-      '<div style="padding-bottom:40px">' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>';
+      '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
+      '<div class="buildtag">Build v5</div>';
   }
 
   function render(){
