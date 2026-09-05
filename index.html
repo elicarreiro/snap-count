@@ -27,14 +27,18 @@
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--chalk);
-    font-family:'Inter',system-ui,-apple-system,sans-serif; overscroll-behavior:none; height:100%;}
-  #app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative;
+    font-family:'Inter',system-ui,-apple-system,sans-serif; overscroll-behavior:none;
+    height:100%; overflow:hidden; position:fixed; width:100%;}
+  /* Fixed-height shell: only .list scrolls, so the footer can't drift with iOS's
+     collapsing address bar. dvh tracks the real viewport; vh is the fallback. */
+  #app{max-width:520px;margin:0 auto;height:100vh;height:100dvh;
+    display:flex;flex-direction:column;position:relative;overflow:hidden;
     padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);}
 
   button{font-family:inherit; cursor:pointer;}
   input{font-family:inherit;}
 
-  .hdr{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  .hdr{flex:0 0 auto;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
     padding:calc(12px + env(safe-area-inset-top)) 14px 10px;}
   .hdr-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
   .brand{display:flex;flex-direction:column;line-height:1.1;min-width:0;}
@@ -90,7 +94,7 @@
   .shareopt{display:flex;align-items:center;gap:11px;width:100%;padding:13px 14px;border-radius:11px;
     background:var(--surface-2);border:1px solid var(--line);color:var(--chalk);
     font-size:14.5px;font-weight:600;text-align:left;}
-  .shareopt i{font-style:normal;font-size:16px;width:20px;text-align:center;color:var(--flag);}
+  .shareopt svg{width:19px;height:19px;flex-shrink:0;color:var(--flag);}
   .shareopt:active{transform:scale(.98);}
   .overlay .impbtn.ghostwide{width:100%;margin-top:11px;padding:11px;border-radius:9px;
     background:transparent;border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:13.5px;}
@@ -127,7 +131,10 @@
   .selectall-btn:active{transform:scale(.95);}
   .sort-btn.active{background:var(--flag);color:#1A1300;border-color:var(--flag);}
 
-  .list{flex:1;overflow-y:auto;padding:2px 12px 150px;}
+  .scrollbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;}
+  .list{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;padding:2px 12px 14px;}
   .empty{text-align:center;color:var(--muted);padding:60px 20px;font-size:14px;line-height:1.6;}
   .empty b{color:var(--chalk);}
 
@@ -153,7 +160,7 @@
   .count.red{color:var(--red);} .count.orange{color:var(--orange);} .count.green{color:var(--green);}
   .countlbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
 
-  .footer{position:sticky;bottom:0;display:flex;gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));
+  .footer{flex:0 0 auto;display:flex;gap:10px;padding:12px 14px calc(12px + env(safe-area-inset-bottom));
     background:var(--surface);border-top:1px solid var(--line);}
   .btn-undo{flex:0 0 84px;border-radius:13px;background:var(--surface-2);border:1px solid var(--line);
     color:var(--chalk);font-weight:700;font-size:14px;}
@@ -279,6 +286,20 @@
   var shareOpen = false;  // report text shown for manual copying if clipboard access is blocked
   var toastMsg = null;
   var toastTimer = null;
+
+  // Line-art icons for the share sheet — same stroke weight as the header icons
+  function icn(paths){
+    return '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" ' +
+      'stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      paths + '</svg>';
+  }
+  var ICONS = {
+    copy:  '<rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path>',
+    share: '<path d="M12 16V4"></path><path d="M8 8l4-4 4 4"></path><path d="M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"></path>',
+    mail:  '<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3.5 7l8.5 6 8.5-6"></path>',
+    sms:   '<path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"></path>',
+    csv:   '<path d="M12 4v11"></path><path d="M8 11l4 4 4-4"></path><path d="M5 19h14"></path>'
+  };
 
   // Haptic tap. Android/Chrome has the Vibration API; iOS Safari never implemented it,
   // so we toggle a hidden switch control, which fires the Taptic Engine as a side effect.
@@ -880,6 +901,7 @@
           '<div class="brand"><b>ROSTER &amp; LINEUPS</b><span>Assign O1–O3 / D1–D3</span></div>' +
         '</div>' +
       '</div>' +
+      '<div class="scrollbody">' +
       '<div class="summary">' + summary + '</div>' +
       '<button class="newgame' + (pendingAction==='newgame'?' danger':'') + '" onclick="app.newGame()">' +
         (pendingAction==='newgame' ? '\u26A0 Tap again to reset all play counts to 0' : '\u21BB Start new game (reset all play counts)') +
@@ -916,7 +938,8 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v9</div>';
+      '<div class="buildtag">Build v11</div>' +
+      '</div>';
   }
 
   function render(){
@@ -933,11 +956,11 @@
         '<div class="sheet" onclick="event.stopPropagation()">' +
           '<div class="sheettitle">Share play counts</div>' +
           '<div class="sharelist">' +
-            '<button class="shareopt" onclick="app.shareVia(\'copy\')"><i>\u29C9</i>Copy to clipboard</button>' +
-            (canShare ? '<button class="shareopt" onclick="app.shareVia(\'share\')"><i>\u2191</i>Share\u2026</button>' : '') +
-            '<button class="shareopt" onclick="app.shareVia(\'email\')"><i>\u2709</i>Email</button>' +
-            '<button class="shareopt" onclick="app.shareVia(\'sms\')"><i>\u2709</i>Text message</button>' +
-            '<button class="shareopt" onclick="app.shareVia(\'csv\')"><i>\u2913</i>Save as CSV</button>' +
+            '<button class="shareopt" onclick="app.shareVia(\'copy\')">' + icn(ICONS.copy) + 'Copy to clipboard</button>' +
+            (canShare ? '<button class="shareopt" onclick="app.shareVia(\'share\')">' + icn(ICONS.share) + 'Share\u2026</button>' : '') +
+            '<button class="shareopt" onclick="app.shareVia(\'email\')">' + icn(ICONS.mail) + 'Email</button>' +
+            '<button class="shareopt" onclick="app.shareVia(\'sms\')">' + icn(ICONS.sms) + 'Text message</button>' +
+            '<button class="shareopt" onclick="app.shareVia(\'csv\')">' + icn(ICONS.csv) + 'Save as CSV</button>' +
           '</div>' +
           '<button class="impbtn ghostwide" onclick="app.closeShare()">Cancel</button>' +
         '</div>' +

@@ -1,5 +1,5 @@
 // Bump this version whenever index.html changes so phones pick up the new build.
-const CACHE = 'snapcount-v9';
+const CACHE = 'snapcount-v11';
 
 const ASSETS = [
   './',
