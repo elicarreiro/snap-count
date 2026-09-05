@@ -95,6 +95,7 @@
     background:var(--surface-2);border:1px solid var(--line);color:var(--chalk);
     font-size:14.5px;font-weight:600;text-align:left;}
   .shareopt svg{width:19px;height:19px;flex-shrink:0;color:var(--flag);}
+  .iconbtn svg,.backbtn svg{display:block;}
   .shareopt:active{transform:scale(.98);}
   .overlay .impbtn.ghostwide{width:100%;margin-top:11px;padding:11px;border-radius:9px;
     background:transparent;border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:13.5px;}
@@ -298,7 +299,10 @@
     share: '<path d="M12 16V4"></path><path d="M8 8l4-4 4 4"></path><path d="M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"></path>',
     mail:  '<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3.5 7l8.5 6 8.5-6"></path>',
     sms:   '<path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"></path>',
-    csv:   '<path d="M12 4v11"></path><path d="M8 11l4 4 4-4"></path><path d="M5 19h14"></path>'
+    csv:   '<path d="M12 4v11"></path><path d="M8 11l4 4 4-4"></path><path d="M5 19h14"></path>',
+    settings: '<path d="M4 7h10"></path><path d="M18 7h2"></path><path d="M4 17h6"></path><path d="M14 17h6"></path>' +
+              '<circle cx="16" cy="7" r="2.2"></circle><circle cx="12" cy="17" r="2.2"></circle>',
+    back:  '<path d="M15 5l-7 7 7 7"></path>'
   };
 
   // Haptic tap. Android/Chrome has the Vibration API; iOS Safari never implemented it,
@@ -801,7 +805,7 @@
     var players = sortedPlayers();
     var listHtml;
     if (!players.length){
-      listHtml = '<div class="empty">No players yet.<br>Tap <b>&#9881;</b> above to build your roster.</div>';
+      listHtml = '<div class="empty">No players yet.<br>Tap settings above to build your roster.</div>';
     } else {
       listHtml = players.map(function(p){
         var sel = state.selected.indexOf(p.id) > -1;
@@ -841,7 +845,7 @@
                 '<path d="M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"></path>' +
               '</svg>' +
             '</button>' +
-            '<button class="iconbtn" onclick="app.goSettings()">&#9881;</button>' +
+            '<button class="iconbtn" onclick="app.goSettings()" aria-label="Settings">' + icn(ICONS.settings) + '</button>' +
           '</div>' +
         '</div>' +
         '<div class="status ' + statusCls + '">' +
@@ -897,7 +901,7 @@
     document.getElementById('app').innerHTML =
       '<div class="hdr">' +
         '<div class="backrow">' +
-          '<button class="backbtn" onclick="app.goMain()">&#8592;</button>' +
+          '<button class="backbtn" onclick="app.goMain()" aria-label="Back">' + icn(ICONS.back) + '</button>' +
           '<div class="brand"><b>ROSTER &amp; LINEUPS</b><span>Assign O1–O3 / D1–D3</span></div>' +
         '</div>' +
       '</div>' +
@@ -938,7 +942,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v11</div>' +
+      '<div class="buildtag">Build v12</div>' +
       '</div>';
   }
 
