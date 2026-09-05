@@ -166,11 +166,11 @@
   .count.red{color:var(--red);} .count.orange{color:var(--orange);} .count.green{color:var(--green);}
   .countlbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
 
-  /* Bottom spacing adapts per device: the inset is 0 on home-button iPhones and in
-     Safari, ~34px on home-indicator models. Halving it keeps the buttons clear of the
-     indicator's swipe zone without leaving a dead band. */
+  /* Flat 10px, deliberately ignoring env(safe-area-inset-bottom). Reserving the full
+     inset left a visible dead band; the buttons sit close to the home indicator but
+     clear of the edge itself. */
   .footer{flex:0 0 auto;display:flex;gap:10px;align-items:stretch;
-    padding:10px 14px max(8px, calc(env(safe-area-inset-bottom) * 0.5));
+    padding:10px 14px 10px;
     background:var(--surface);border-top:1px solid var(--line);}
   .btn-undo{flex:0 0 84px;border-radius:13px;background:var(--surface-2);border:1px solid var(--line);
     color:var(--chalk);font-weight:700;font-size:14px;padding:11px 0;}
@@ -362,8 +362,11 @@
       probe.remove();
       var standalone = (window.navigator.standalone === true) ||
         (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-      return 'inset ' + inset + 'px · app ' + (app ? Math.round(app.getBoundingClientRect().height) : '?') +
-             '/' + window.innerHeight + 'px · ' + (standalone ? 'installed' : 'browser');
+      var appH = app ? Math.round(app.getBoundingClientRect().height) : 0;
+      var gap = window.innerHeight - appH;
+      return 'inset ' + inset + 'px · app ' + appH + '/' + window.innerHeight + 'px' +
+             (gap > 1 ? ' · SHORT BY ' + gap + 'px' : ' · fills screen') +
+             ' · ' + (standalone ? 'installed' : 'browser');
     } catch(e){ return ''; }
   }
 
@@ -956,7 +959,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v17<br><span class="diag">' + diagLine() + '</span></div>' +
+      '<div class="buildtag">Build v18<br><span class="diag">' + diagLine() + '</span></div>' +
       '</div>';
   }
 
