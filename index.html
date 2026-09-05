@@ -60,6 +60,20 @@
   .snaptally b{font-family:'Oswald';font-weight:700;font-size:17px;color:var(--flag);}
   .snaptally span{font-size:8.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-top:2px;}
 
+  #haptic-label{position:fixed;top:-100px;left:-100px;width:1px;height:1px;opacity:0;
+    pointer-events:none;}
+
+  .snapfx{position:fixed;top:50%;left:50%;margin:-21px 0 0 -31px;z-index:55;
+    pointer-events:none;opacity:0;animation:snapspin .62s cubic-bezier(.2,.7,.3,1) forwards;}
+  @keyframes snapspin{
+    0%{opacity:0;transform:scale(.5) rotate(-140deg);}
+    35%{opacity:1;}
+    100%{opacity:0;transform:scale(1.5) rotate(340deg);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .snapfx{animation:snapfade .28s ease-out forwards;}
+    @keyframes snapfade{0%{opacity:.9;}100%{opacity:0;}}
+  }
   .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:60;
     background:var(--chalk);color:#10180F;padding:10px 16px;border-radius:22px;
     font-size:13.5px;font-weight:600;box-shadow:0 6px 20px rgba(0,0,0,.45);}
@@ -212,6 +226,8 @@
 </head>
 <body>
 <div id="app"></div>
+<!-- iOS has no Vibration API; toggling a switch control is what pokes the Taptic Engine -->
+<label id="haptic-label" for="haptic-switch" aria-hidden="true"><input type="checkbox" switch id="haptic-switch" tabindex="-1"></label>
 
 <script>
 (function(){
@@ -263,6 +279,35 @@
   var shareOpen = false;  // report text shown for manual copying if clipboard access is blocked
   var toastMsg = null;
   var toastTimer = null;
+
+  // Haptic tap. Android/Chrome has the Vibration API; iOS Safari never implemented it,
+  // so we toggle a hidden switch control, which fires the Taptic Engine as a side effect.
+  // Football spin on snap. Appended outside #app so a re-render can't wipe it mid-flight,
+  // and pointer-events:none so a fast second tap still lands on the button.
+  var SNAP_BALL = '<svg width="62" height="42" viewBox="0 0 62 42" aria-hidden="true">' +
+    '<path d="M31 2C45 2 60 11.5 60 21C60 30.5 45 40 31 40C17 40 2 30.5 2 21C2 11.5 17 2 31 2Z" fill="#FFD23F"/>' +
+    '<g stroke="#161F1A" stroke-width="2.4" stroke-linecap="round">' +
+    '<path d="M23 21h16"/><path d="M27 17v8"/><path d="M31 17v8"/><path d="M35 17v8"/></g></svg>';
+
+  function snapSpin(){
+    try{
+      var el = document.createElement('div');
+      el.className = 'snapfx';
+      el.innerHTML = SNAP_BALL;
+      document.body.appendChild(el);
+      setTimeout(function(){ if (el.parentNode) el.parentNode.removeChild(el); }, 900);
+    } catch(e){}
+  }
+
+  function haptic(){
+    try{
+      if (navigator.vibrate && navigator.vibrate(18)) return;
+    } catch(e){}
+    try{
+      var lbl = document.getElementById('haptic-label');
+      if (lbl) lbl.click();
+    } catch(e){}
+  }
 
   function toast(msg){
     toastMsg = msg;
@@ -604,6 +649,8 @@
       });
       state.totalSnaps += 1;
       state.quarterSnaps[qi] += 1;
+      haptic();
+      snapSpin();
       scheduleSave(); render();
     },
     undo: function(){
@@ -869,7 +916,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v7</div>';
+      '<div class="buildtag">Build v9</div>';
   }
 
   function render(){
