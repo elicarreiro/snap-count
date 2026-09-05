@@ -2,9 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+<meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+<!-- Mirrors a known-good iOS PWA config: height=device-height forces a full-height
+     standalone window, and omitting viewport-fit=cover lets iOS inset the viewport
+     itself rather than handing us the full screen to pad (which left a dead strip). -->
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 <meta name="theme-color" content="#0E1512" />
 <link rel="manifest" href="./manifest.webmanifest" />
 <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
@@ -987,7 +991,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v21<br><span class="diag">' + diagLine() + '</span></div>' +
+      '<div class="buildtag">Build v23<br><span class="diag">' + diagLine() + '</span></div>' +
       '</div>';
   }
 
