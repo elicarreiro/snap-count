@@ -307,8 +307,6 @@
   var ICONS = {
     copy:  '<rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path>',
     share: '<path d="M12 16V4"></path><path d="M8 8l4-4 4 4"></path><path d="M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"></path>',
-    mail:  '<rect x="3" y="5" width="18" height="14" rx="2"></rect><path d="M3.5 7l8.5 6 8.5-6"></path>',
-    sms:   '<path d="M20 15a2 2 0 0 1-2 2H8l-4 3V6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2z"></path>',
     csv:   '<path d="M12 4v11"></path><path d="M8 11l4 4 4-4"></path><path d="M5 19h14"></path>',
     settings: '<path d="M4 7h10"></path><path d="M18 7h2"></path><path d="M4 17h6"></path><path d="M14 17h6"></path>' +
               '<circle cx="16" cy="7" r="2.2"></circle><circle cx="12" cy="17" r="2.2"></circle>',
@@ -596,18 +594,6 @@
         shareOpen = false; render();
         try{ await navigator.share({ title: subject, text: text }); }
         catch(e){ /* user dismissed, or share unavailable */ }
-        return;
-      }
-      if (how === 'email'){
-        shareOpen = false; render();
-        location.href = 'mailto:?subject=' + encodeURIComponent(subject) +
-                        '&body=' + encodeURIComponent(text);
-        return;
-      }
-      if (how === 'sms'){
-        shareOpen = false; render();
-        // iOS wants sms:&body=, Android wants sms:?body= — this form works on both
-        location.href = 'sms:&body=' + encodeURIComponent(text);
         return;
       }
       if (how === 'csv'){
@@ -970,7 +956,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v16<br><span class="diag">' + diagLine() + '</span></div>' +
+      '<div class="buildtag">Build v17<br><span class="diag">' + diagLine() + '</span></div>' +
       '</div>';
   }
 
@@ -1004,8 +990,6 @@
           '<div class="sharelist">' +
             '<button class="shareopt" onclick="app.shareVia(\'copy\')">' + icn(ICONS.copy) + 'Copy to clipboard</button>' +
             (canShare ? '<button class="shareopt" onclick="app.shareVia(\'share\')">' + icn(ICONS.share) + 'Share\u2026</button>' : '') +
-            '<button class="shareopt" onclick="app.shareVia(\'email\')">' + icn(ICONS.mail) + 'Email</button>' +
-            '<button class="shareopt" onclick="app.shareVia(\'sms\')">' + icn(ICONS.sms) + 'Text message</button>' +
             '<button class="shareopt" onclick="app.shareVia(\'csv\')">' + icn(ICONS.csv) + 'Save as CSV</button>' +
           '</div>' +
           '<button class="impbtn ghostwide" onclick="app.closeShare()">Cancel</button>' +
