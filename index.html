@@ -37,9 +37,19 @@
   .hdr{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
     padding:calc(12px + env(safe-area-inset-top)) 14px 10px;}
   .hdr-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-  .brand{display:flex;flex-direction:column;line-height:1.1;}
-  .brand b{font-family:'Oswald';font-weight:700;font-size:19px;letter-spacing:.3px;}
-  .brand span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+  .brand{display:flex;flex-direction:column;line-height:1.1;min-width:0;}
+  .brand b{font-family:'Oswald';font-weight:700;font-size:17px;letter-spacing:.3px;}
+  .brand span{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-top:2px;}
+
+  .qtiles{display:flex;gap:5px;flex:1;min-width:0;}
+  .qtile{flex:1;min-width:0;padding:5px 2px;border-radius:9px;background:var(--surface-2);
+    border:1px solid var(--line);color:var(--muted);display:flex;flex-direction:column;
+    align-items:center;justify-content:center;line-height:1;}
+  .qtile b{font-family:'Oswald';font-weight:700;font-size:13px;letter-spacing:.3px;}
+  .qtile span{font-size:11px;font-weight:700;margin-top:3px;opacity:.75;}
+  .qtile.on{background:var(--flag);border-color:var(--flag);color:#1A1300;}
+  .qtile.on span{opacity:.8;}
+  .qtile:active{transform:scale(.95);}
   .iconbtn{width:38px;height:38px;border-radius:10px;background:var(--surface-2);border:1px solid var(--line);
     color:var(--chalk);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
   .iconbtn:active{transform:scale(.94);}
@@ -61,6 +71,15 @@
   .overlay textarea{width:100%;height:220px;background:var(--surface-2);border:1px solid var(--line);
     border-radius:9px;color:var(--chalk);padding:10px;font-size:12.5px;
     font-family:ui-monospace,Menlo,monospace;white-space:pre;resize:vertical;}
+  .sheettitle{font-family:'Oswald';font-weight:700;font-size:16px;margin-bottom:12px;letter-spacing:.3px;}
+  .sharelist{display:flex;flex-direction:column;gap:7px;}
+  .shareopt{display:flex;align-items:center;gap:11px;width:100%;padding:13px 14px;border-radius:11px;
+    background:var(--surface-2);border:1px solid var(--line);color:var(--chalk);
+    font-size:14.5px;font-weight:600;text-align:left;}
+  .shareopt i{font-style:normal;font-size:16px;width:20px;text-align:center;color:var(--flag);}
+  .shareopt:active{transform:scale(.98);}
+  .overlay .impbtn.ghostwide{width:100%;margin-top:11px;padding:11px;border-radius:9px;
+    background:transparent;border:1px solid var(--line);color:var(--muted);font-weight:600;font-size:13.5px;}
   .overlay .impbtn{width:100%;margin-top:10px;padding:11px;border-radius:9px;background:var(--flag);
     color:#1A1300;border:none;font-weight:700;font-size:14px;}
 
@@ -79,13 +98,11 @@
   @keyframes shake{0%,100%{transform:translateX(0);}25%{transform:translateX(-4px);}75%{transform:translateX(4px);}}
 
   .lineup-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;padding:10px 14px 0;}
-  .lu-btn{padding:9px 0;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);
-    color:var(--chalk);font-family:'Oswald';font-weight:600;font-size:13px;}
-  .lu-btn small{display:block;font-family:'Inter';font-weight:600;font-size:9px;color:var(--muted);margin-top:1px;}
+  .lu-btn{padding:11px 0;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);
+    color:var(--chalk);font-family:'Oswald';font-weight:600;font-size:14px;}
   .lu-btn:active{transform:scale(.95);}
   .lu-btn.off{color:var(--muted);opacity:.55;}
   .lu-btn.active{background:var(--flag);border-color:var(--flag);color:#1A1300;opacity:1;}
-  .lu-btn.active small{color:#1A1300;opacity:.7;}
 
   .toolrow{display:flex;align-items:center;gap:6px;padding:10px 14px 12px;}
   .toolrow .lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-right:2px;}
@@ -112,10 +129,11 @@
   .nametext{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}
   .need{font-size:11.5px;font-weight:500;color:var(--muted);opacity:.8;white-space:nowrap;}
   .need.done{color:var(--green);opacity:1;font-weight:600;}
-  .yardbar{width:100%;max-width:150px;height:6px;background:var(--line);border-radius:3px;margin-top:6px;
-    position:relative;overflow:hidden;}
-  .yardbar .fill{height:100%;border-radius:3px;transition:width .2s;}
-  .fill.red{background:var(--red);} .fill.orange{background:var(--orange);} .fill.green{background:var(--green);}
+  .qline{display:flex;gap:9px;margin-top:5px;}
+  .qcell{font-size:10.5px;color:var(--muted);opacity:.72;letter-spacing:.03em;}
+  .qcell b{font-weight:700;margin-left:3px;color:var(--chalk);opacity:.85;}
+  .qcell.now{opacity:1;color:var(--flag);}
+  .qcell.now b{color:var(--flag);}
   .countwrap{text-align:right;flex-shrink:0;min-width:44px;}
   .count{font-family:'Oswald';font-weight:700;font-size:24px;line-height:1;}
   .count.red{color:var(--red);} .count.orange{color:var(--orange);} .count.green{color:var(--green);}
@@ -233,13 +251,16 @@
     selected: [],
     history: [],
     totalSnaps: 0,
+    quarter: 1,
+    quarterSnaps: [0,0,0,0],
     sheetUrl: DEFAULT_SHEET_URL
   };
 
   var importMsg = null; // { text, ok } — transient, not persisted
   var pasteDraft = '';  // keeps textarea contents across re-renders
   var pendingAction = null; // 'import' | 'newgame' — in-app confirm, since sandboxed pages block confirm()
-  var copyFallback = null;  // report text shown for manual copying if clipboard access is blocked
+  var copyFallback = null;
+  var shareOpen = false;  // report text shown for manual copying if clipboard access is blocked
   var toastMsg = null;
   var toastTimer = null;
 
@@ -250,18 +271,77 @@
     toastTimer = setTimeout(function(){ toastMsg = null; render(); }, 2200);
   }
 
-  // Plain-text report, matching the on-screen sort order, aligned so it stays readable when pasted
+  function todayStr(){
+    return new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
+  }
+
+  // Plain-text report with per-quarter columns, matching the on-screen sort order
   function buildReport(){
-    var date = new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
     var list = sortedPlayers();
     var numW = Math.max.apply(null, list.map(function(p){ return ('#'+(p.number||'')).length; }).concat([2]));
     var nameW = Math.max.apply(null, list.map(function(p){ return p.name.length; }).concat([4]));
+    var head = ''.padEnd(numW) + '  ' + 'PLAYER'.padEnd(nameW) + '   Q1  Q2  Q3  Q4  TOT';
     var lines = list.map(function(p){
-      var num = ('#' + (p.number || '')).padEnd(numW);
-      var nm = p.name.padEnd(nameW);
-      return num + '  ' + nm + '  ' + String(p.plays).padStart(2) + (p.plays < 14 ? '' : '  \u2713');
+      var q = p.q || [0,0,0,0];
+      return ('#' + (p.number || '')).padEnd(numW) + '  ' + p.name.padEnd(nameW) + '  ' +
+        q.map(function(v){ return String(v).padStart(3); }).join(' ') + ' ' +
+        String(p.plays).padStart(4) + (p.plays >= 14 ? '  \u2713' : '');
     });
-    return 'Wilton Warrior Play Counts\n' + date + '\n\n' + lines.join('\n');
+    var snaps = 'Team snaps  Q1 ' + state.quarterSnaps[0] + '  Q2 ' + state.quarterSnaps[1] +
+                '  Q3 ' + state.quarterSnaps[2] + '  Q4 ' + state.quarterSnaps[3] +
+                '  Total ' + state.totalSnaps;
+    return 'Wilton Warrior Play Counts\n' + todayStr() + '\n\n' +
+           head + '\n' + lines.join('\n') + '\n\n' + snaps;
+  }
+
+  function buildCSV(){
+    var rows = [['Jersey','Name','Q1','Q2','Q3','Q4','Total']];
+    sortedPlayers().forEach(function(p){
+      var q = p.q || [0,0,0,0];
+      rows.push([p.number || '', p.name, q[0], q[1], q[2], q[3], p.plays]);
+    });
+    rows.push([]);
+    rows.push(['Team snaps','', state.quarterSnaps[0], state.quarterSnaps[1],
+               state.quarterSnaps[2], state.quarterSnaps[3], state.totalSnaps]);
+    return rows.map(function(r){
+      return r.map(function(cell){
+        var v = String(cell == null ? '' : cell);
+        return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+      }).join(',');
+    }).join('\n');
+  }
+
+  async function copyText(text){
+    try{
+      if (navigator.clipboard && navigator.clipboard.writeText){
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch(e){}
+    try{
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly','');
+      ta.style.position='fixed'; ta.style.top='0'; ta.style.opacity='0';
+      document.body.appendChild(ta);
+      ta.select(); ta.setSelectionRange(0, text.length);
+      var ok = document.execCommand('copy');
+      document.body.removeChild(ta);
+      return !!ok;
+    } catch(e){ return false; }
+  }
+
+  function downloadCSV(csv, filename){
+    try{
+      var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1500);
+      return true;
+    } catch(e){ return false; }
   }
 
   // Parses CSV or TSV (tab-separated, which is what copying cells out of Sheets gives you)
@@ -304,7 +384,9 @@
       var number = idxNum > -1 ? getCell(r, idxNum) : '';
       var prior = number ? oldPlayers.find(function(p){ return p.number === number; }) : null;
       if (prior) kept++;
-      var p = { id: prior ? prior.id : uid(), number: number, name: name, plays: prior ? prior.plays : 0 };
+      var p = { id: prior ? prior.id : uid(), number: number, name: name,
+                plays: prior ? prior.plays : 0,
+                q: prior && prior.q ? prior.q.slice() : [0,0,0,0] };
       LINEUPS.forEach(function(k){
         var ci = idxLineup[k];
         p[k] = ci > -1 && getCell(r, ci) !== '';
@@ -392,41 +474,55 @@
       scheduleSave(); render();
     },
     setSort: function(mode){ state.sortMode = mode; render(); },
+    setQuarter: function(q){ state.quarter = q; scheduleSave(); render(); },
 
-    copyReport: async function(){
-      if (!state.players.length){
-        toast('No players on the roster yet.');
+    openShare: function(){
+      if (!state.players.length){ toast('No players on the roster yet.'); return; }
+      shareOpen = true; render();
+    },
+    closeShare: function(){ shareOpen = false; render(); },
+
+    shareVia: async function(how){
+      var text = buildReport();
+      var subject = 'Wilton Warrior Play Counts \u2014 ' + todayStr();
+
+      if (how === 'copy'){
+        var ok = await copyText(text);
+        shareOpen = false;
+        if (ok){ toast('Play counts copied'); }
+        else { copyFallback = text; }
+        render();
         return;
       }
-      var text = buildReport();
-      try{
-        if (navigator.clipboard && navigator.clipboard.writeText){
-          await navigator.clipboard.writeText(text);
-          toast('Play counts copied');
-          return;
-        }
-        throw new Error('clipboard api unavailable');
-      } catch(e){
-        // Fall back to the old execCommand path, which works in more sandboxes
-        try{
-          var ta = document.createElement('textarea');
-          ta.value = text;
-          ta.setAttribute('readonly','');
-          ta.style.position = 'fixed';
-          ta.style.top = '0';
-          ta.style.opacity = '0';
-          document.body.appendChild(ta);
-          ta.select();
-          ta.setSelectionRange(0, text.length);
-          var ok = document.execCommand('copy');
-          document.body.removeChild(ta);
-          if (ok){ toast('Play counts copied'); return; }
-        } catch(e2){}
-        // Last resort: show the text so it can be selected and copied by hand
-        copyFallback = text;
+      if (how === 'share'){
+        shareOpen = false; render();
+        try{ await navigator.share({ title: subject, text: text }); }
+        catch(e){ /* user dismissed, or share unavailable */ }
+        return;
+      }
+      if (how === 'email'){
+        shareOpen = false; render();
+        location.href = 'mailto:?subject=' + encodeURIComponent(subject) +
+                        '&body=' + encodeURIComponent(text);
+        return;
+      }
+      if (how === 'sms'){
+        shareOpen = false; render();
+        // iOS wants sms:&body=, Android wants sms:?body= — this form works on both
+        location.href = 'sms:&body=' + encodeURIComponent(text);
+        return;
+      }
+      if (how === 'csv'){
+        shareOpen = false;
+        var name = 'play-counts-' + todayStr().replace(/[^0-9A-Za-z]+/g,'-').toLowerCase() + '.csv';
+        var saved = downloadCSV(buildCSV(), name);
+        if (saved){ toast('CSV saved'); }
+        else { copyFallback = buildCSV(); }
         render();
+        return;
       }
     },
+
     closeCopyFallback: function(){ copyFallback = null; render(); },
 
     importFromSheet: async function(){
@@ -499,21 +595,31 @@
     snap: function(){
       if (!state.selected.length) return;
       if (state.selected.length > 11){ flashStatus(); return; }
-      state.history.push({ ids: state.selected.slice() });
+      var qi = state.quarter - 1;
+      state.history.push({ ids: state.selected.slice(), q: qi });
       if (state.history.length > 50) state.history.shift();
       state.selected.forEach(function(id){
-        var p = find(id); if (p) p.plays += 1;
+        var p = find(id);
+        if (p){ p.plays += 1; if (!p.q) p.q = [0,0,0,0]; p.q[qi] += 1; }
       });
       state.totalSnaps += 1;
+      state.quarterSnaps[qi] += 1;
       scheduleSave(); render();
     },
     undo: function(){
       if (!state.history.length) return;
       var last = state.history.pop();
+      var qi = typeof last.q === 'number' ? last.q : (state.quarter - 1);
       last.ids.forEach(function(id){
-        var p = find(id); if (p) p.plays = Math.max(0, p.plays - 1);
+        var p = find(id);
+        if (p){
+          p.plays = Math.max(0, p.plays - 1);
+          if (!p.q) p.q = [0,0,0,0];
+          p.q[qi] = Math.max(0, p.q[qi] - 1);
+        }
       });
       state.totalSnaps = Math.max(0, state.totalSnaps - 1);
+      state.quarterSnaps[qi] = Math.max(0, state.quarterSnaps[qi] - 1);
       scheduleSave(); render();
     },
 
@@ -522,7 +628,7 @@
       var nmEl = document.getElementById('new-name');
       var name = nmEl.value.trim();
       if (!name) { nmEl.focus(); return; }
-      var p = { id: uid(), number: numEl.value.trim(), name: name, plays: 0 };
+      var p = { id: uid(), number: numEl.value.trim(), name: name, plays: 0, q: [0,0,0,0] };
       LINEUPS.forEach(function(k){ p[k] = false; });
       state.players.push(p);
       numEl.value = ''; nmEl.value = '';
@@ -549,10 +655,12 @@
         importMsg = null;
         render(); return;
       }
-      state.players.forEach(function(p){ p.plays = 0; });
+      state.players.forEach(function(p){ p.plays = 0; p.q = [0,0,0,0]; });
       state.selected = [];
       state.history = [];
       state.totalSnaps = 0;
+      state.quarterSnaps = [0,0,0,0];
+      state.quarter = 1;
       pendingAction = null;
       scheduleSave(); render();
     },
@@ -619,8 +727,7 @@
     var luButtons = LINEUPS.map(function(k){
       var n = state.players.filter(function(p){ return p[k]; }).length;
       var cls = 'lu-btn' + (n===0 ? ' off' : '') + (lineupIsSelected(k) ? ' active' : '');
-      return '<button class="' + cls + '" onclick="app.batchSelect(\'' + k + '\')">' + k +
-        '<small>' + n + '</small></button>';
+      return '<button class="' + cls + '" onclick="app.batchSelect(\'' + k + '\')">' + k + '</button>';
     }).join('');
 
     var players = sortedPlayers();
@@ -631,16 +738,18 @@
       listHtml = players.map(function(p){
         var sel = state.selected.indexOf(p.id) > -1;
         var col = statusColor(p.plays);
-        var pct = Math.min(100, (p.plays/14)*100);
         var need = 14 - p.plays;
         var needTxt = need <= 0
           ? '<span class="need done">&#10003; Done</span>'
           : '<span class="need">' + need + ' more</span>';
+        var qline = (p.q || [0,0,0,0]).map(function(v, i){
+          return '<span class="qcell' + (state.quarter===i+1?' now':'') + '">Q' + (i+1) + '<b>' + v + '</b></span>';
+        }).join('');
         return '<div class="row ' + (sel?'sel':'') + '" onclick="app.toggleSelect(\'' + p.id + '\')">' +
           '<div class="jersey">' + esc(p.number||'—') + '</div>' +
           '<div class="pinfo">' +
             '<div class="pname"><span class="nametext">' + esc(p.name) + '</span>' + needTxt + '</div>' +
-            '<div class="yardbar"><div class="fill ' + col + '" style="width:' + pct + '%"></div></div>' +
+            '<div class="qline">' + qline + '</div>' +
           '</div>' +
           '<div class="countwrap"><div class="count ' + col + '">' + p.plays + '</div><div class="countlbl">plays</div></div>' +
         '</div>';
@@ -650,13 +759,18 @@
     document.getElementById('app').innerHTML =
       '<div class="hdr">' +
         '<div class="hdr-row">' +
-          '<div class="brand"><b>SNAP COUNT</b><span>Sideline Play Tracker</span></div>' +
+          '<div class="qtiles">' +
+            [1,2,3,4].map(function(q){
+              return '<button class="qtile' + (state.quarter===q?' on':'') + '" onclick="app.setQuarter(' + q + ')">' +
+                '<b>Q' + q + '</b><span>' + state.quarterSnaps[q-1] + '</span></button>';
+            }).join('') +
+          '</div>' +
           '<div class="hdr-actions">' +
-            '<div class="snaptally"><b>' + state.totalSnaps + '</b><span>snaps</span></div>' +
-            '<button class="iconbtn" onclick="app.copyReport()" aria-label="Copy play counts">' +
+            '<div class="snaptally"><b>' + state.totalSnaps + '</b><span>total</span></div>' +
+            '<button class="iconbtn" onclick="app.openShare()" aria-label="Share play counts">' +
               '<svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-                '<rect x="9" y="9" width="11" height="11" rx="2"></rect>' +
-                '<path d="M5 15V5a2 2 0 0 1 2-2h10"></path>' +
+                '<path d="M12 16V4"></path><path d="M8 8l4-4 4 4"></path>' +
+                '<path d="M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"></path>' +
               '</svg>' +
             '</button>' +
             '<button class="iconbtn" onclick="app.goSettings()">&#9881;</button>' +
@@ -755,7 +869,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v5</div>';
+      '<div class="buildtag">Build v7</div>';
   }
 
   function render(){
@@ -765,6 +879,22 @@
     var extra = '';
     if (toastMsg){
       extra += '<div class="toast">' + esc(toastMsg) + '</div>';
+    }
+    if (shareOpen){
+      var canShare = typeof navigator !== 'undefined' && !!navigator.share;
+      extra += '<div class="overlay" onclick="app.closeShare()">' +
+        '<div class="sheet" onclick="event.stopPropagation()">' +
+          '<div class="sheettitle">Share play counts</div>' +
+          '<div class="sharelist">' +
+            '<button class="shareopt" onclick="app.shareVia(\'copy\')"><i>\u29C9</i>Copy to clipboard</button>' +
+            (canShare ? '<button class="shareopt" onclick="app.shareVia(\'share\')"><i>\u2191</i>Share\u2026</button>' : '') +
+            '<button class="shareopt" onclick="app.shareVia(\'email\')"><i>\u2709</i>Email</button>' +
+            '<button class="shareopt" onclick="app.shareVia(\'sms\')"><i>\u2709</i>Text message</button>' +
+            '<button class="shareopt" onclick="app.shareVia(\'csv\')"><i>\u2913</i>Save as CSV</button>' +
+          '</div>' +
+          '<button class="impbtn ghostwide" onclick="app.closeShare()">Cancel</button>' +
+        '</div>' +
+      '</div>';
     }
     if (copyFallback){
       extra += '<div class="overlay">' +
@@ -806,6 +936,14 @@
           state.selected = Array.isArray(loaded.selected) ? loaded.selected : [];
           state.history = Array.isArray(loaded.history) ? loaded.history : [];
           state.totalSnaps = typeof loaded.totalSnaps === 'number' ? loaded.totalSnaps : 0;
+          state.quarter = loaded.quarter >= 1 && loaded.quarter <= 4 ? loaded.quarter : 1;
+          state.quarterSnaps = Array.isArray(loaded.quarterSnaps) && loaded.quarterSnaps.length === 4
+            ? loaded.quarterSnaps : [0,0,0,0];
+          // Rosters saved before quarters existed have no per-quarter split; bank
+          // their existing total into Q1 so the quarters still add up to the total.
+          state.players.forEach(function(p){
+            if (!Array.isArray(p.q) || p.q.length !== 4){ p.q = [p.plays || 0, 0, 0, 0]; }
+          });
           state.sheetUrl = typeof loaded.sheetUrl === 'string' && loaded.sheetUrl ? loaded.sheetUrl : DEFAULT_SHEET_URL;
         }
       }catch(e){}
