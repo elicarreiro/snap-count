@@ -175,11 +175,10 @@
   .count.red{color:var(--red);} .count.orange{color:var(--orange);} .count.green{color:var(--green);}
   .countlbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
 
-  /* Flat 10px, deliberately ignoring env(safe-area-inset-bottom). Reserving the full
-     inset left a visible dead band; the buttons sit close to the home indicator but
-     clear of the edge itself. */
+  /* Flat padding: without viewport-fit=cover the safe-area insets report 0, so the
+     bottom value is just breathing room above the screen edge. */
   .footer{flex:0 0 auto;display:flex;gap:10px;align-items:stretch;
-    padding:10px 14px 10px;
+    padding:10px 14px 18px;
     background:var(--surface);border-top:1px solid var(--line);}
   .btn-undo{flex:0 0 84px;border-radius:13px;background:var(--surface-2);border:1px solid var(--line);
     color:var(--chalk);font-weight:700;font-size:14px;padding:11px 0;}
@@ -991,7 +990,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v23<br><span class="diag">' + diagLine() + '</span></div>' +
+      '<div class="buildtag">Build v24<br><span class="diag">' + diagLine() + '</span></div>' +
       '</div>';
   }
 
