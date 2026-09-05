@@ -363,9 +363,18 @@
       var standalone = (window.navigator.standalone === true) ||
         (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
       var appH = app ? Math.round(app.getBoundingClientRect().height) : 0;
-      var gap = window.innerHeight - appH;
-      return 'inset ' + inset + 'px · app ' + appH + '/' + window.innerHeight + 'px' +
-             (gap > 1 ? ' · SHORT BY ' + gap + 'px' : ' · fills screen') +
+      var foot = document.querySelector('.footer');
+      var footBottom = foot ? Math.round(foot.getBoundingClientRect().bottom) : 0;
+      var vv = window.visualViewport ? Math.round(window.visualViewport.height) : 0;
+      var probeTop = document.createElement('div');
+      probeTop.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top);width:1px;';
+      document.body.appendChild(probeTop);
+      var insetTop = Math.round(probeTop.getBoundingClientRect().height);
+      probeTop.remove();
+      return 'screen ' + window.screen.height + ' · inner ' + window.innerHeight +
+             ' · visual ' + vv + ' · app ' + appH +
+             ' · footBottom ' + footBottom +
+             ' · insetT ' + insetTop + ' insetB ' + inset +
              ' · ' + (standalone ? 'installed' : 'browser');
     } catch(e){ return ''; }
   }
@@ -959,7 +968,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v18<br><span class="diag">' + diagLine() + '</span></div>' +
+      '<div class="buildtag">Build v19<br><span class="diag">' + diagLine() + '</span></div>' +
       '</div>';
   }
 
