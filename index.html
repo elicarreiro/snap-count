@@ -26,12 +26,17 @@
     --green:#4CAF6D;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  html,body{margin:0;padding:0;background:var(--bg);color:var(--chalk);
+  /* body is pinned to all four edges of the viewport rather than sized with height
+     units — iOS standalone resolves dvh/vh shorter than the real screen, which left a
+     strip of page background under the app. inset:0 can't disagree with the viewport.
+     Its background matches the footer so any residual hairline is invisible. */
+  html{height:100%;}
+  body{margin:0;padding:0;background:var(--surface);color:var(--chalk);
     font-family:'Inter',system-ui,-apple-system,sans-serif; overscroll-behavior:none;
-    height:100%; overflow:hidden; position:fixed; width:100%;}
+    overflow:hidden; position:fixed; top:0; right:0; bottom:0; left:0;}
   /* Fixed-height shell: only .list scrolls, so the footer can't drift with iOS's
      collapsing address bar. dvh tracks the real viewport; vh is the fallback. */
-  #app{max-width:520px;margin:0 auto;height:100vh;height:100dvh;
+  #app{max-width:520px;margin:0 auto;height:100%;background:var(--bg);
     display:flex;flex-direction:column;position:relative;overflow:hidden;
     padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);}
 
@@ -230,7 +235,8 @@
   .chip.disabled{opacity:.3;}
   .backrow{display:flex;align-items:center;gap:10px;}
   .buildtag{text-align:center;color:var(--muted);opacity:.55;font-size:11px;padding:14px 0 44px;
-    letter-spacing:.06em;}
+    letter-spacing:.06em;line-height:1.7;}
+  .diag{font-size:10px;opacity:.8;}
   .backbtn{width:36px;height:36px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);
     color:var(--chalk);font-size:16px;}
   .sectitle{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:14px 14px 2px;}
@@ -343,6 +349,24 @@
     render();
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function(){ toastMsg = null; render(); }, 2200);
+  }
+
+  // Temporary: reports the real measurements so bottom-spacing issues can be
+  // diagnosed on-device instead of guessed at. Safe to remove.
+  function diagLine(){
+    try{
+      var app = document.getElementById('app');
+      var cs = getComputedStyle(document.documentElement);
+      var probe = document.createElement('div');
+      probe.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom);width:1px;';
+      document.body.appendChild(probe);
+      var inset = Math.round(probe.getBoundingClientRect().height);
+      probe.remove();
+      var standalone = (window.navigator.standalone === true) ||
+        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+      return 'inset ' + inset + 'px · app ' + (app ? Math.round(app.getBoundingClientRect().height) : '?') +
+             '/' + window.innerHeight + 'px · ' + (standalone ? 'installed' : 'browser');
+    } catch(e){ return ''; }
   }
 
   function todayStr(){
@@ -946,7 +970,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v15</div>' +
+      '<div class="buildtag">Build v16<br><span class="diag">' + diagLine() + '</span></div>' +
       '</div>';
   }
 
