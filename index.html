@@ -26,19 +26,24 @@
     --green:#4CAF6D;
   }
   *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-  /* body is pinned to all four edges of the viewport rather than sized with height
-     units — iOS standalone resolves dvh/vh shorter than the real screen, which left a
-     strip of page background under the app. inset:0 can't disagree with the viewport.
-     Its background matches the footer so any residual hairline is invisible. */
-  html{height:100%;}
+  /* Body is NOT position:fixed — pinning it to inset:0 latches onto iOS standalone's
+     small viewport and the shell never grows to the full screen. overflow:hidden alone
+     is enough to stop page scrolling. Background matches the footer so any residual
+     strip blends instead of reading as a black band. */
+  html,body{height:100%;}
   body{margin:0;padding:0;background:var(--surface);color:var(--chalk);
     font-family:'Inter',system-ui,-apple-system,sans-serif; overscroll-behavior:none;
-    overflow:hidden; position:fixed; top:0; right:0; bottom:0; left:0;}
+    overflow:hidden;}
   /* Fixed-height shell: only .list scrolls, so the footer can't drift with iOS's
      collapsing address bar. dvh tracks the real viewport; vh is the fallback. */
-  #app{max-width:520px;margin:0 auto;height:100%;background:var(--bg);
+  /* 100vh in standalone: no browser chrome exists, so it should equal the full screen.
+     In an actual browser tab the toolbar does move, so dvh is right there instead. */
+  #app{max-width:520px;margin:0 auto;height:100vh;background:var(--bg);
     display:flex;flex-direction:column;position:relative;overflow:hidden;
     padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right);}
+  @media (display-mode: browser){
+    #app{height:100dvh;}
+  }
 
   button{font-family:inherit; cursor:pointer;}
   input{font-family:inherit;}
@@ -351,6 +356,20 @@
 
   // Temporary: reports the real measurements so bottom-spacing issues can be
   // diagnosed on-device instead of guessed at. Safe to remove.
+  // Safety net for the 100vh gamble: if the shell ends up taller than the window,
+  // the footer would sit off-screen. Clamp it to the measured height in that case.
+  function fitShell(){
+    try{
+      var app = document.getElementById('app');
+      if (!app) return;
+      app.style.height = '';
+      var h = app.getBoundingClientRect().height;
+      if (h > window.innerHeight + 1){ app.style.height = window.innerHeight + 'px'; }
+    } catch(e){}
+  }
+  window.addEventListener('resize', fitShell);
+  window.addEventListener('orientationchange', function(){ setTimeout(fitShell, 120); });
+
   function diagLine(){
     try{
       var app = document.getElementById('app');
@@ -968,7 +987,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v20<br><span class="diag">' + diagLine() + '</span></div>' +
+      '<div class="buildtag">Build v21<br><span class="diag">' + diagLine() + '</span></div>' +
       '</div>';
   }
 
@@ -1061,7 +1080,8 @@
       }catch(e){}
     }
     render();
-  }).catch(function(){ render(); });
+    fitShell();
+  }).catch(function(){ render(); fitShell(); });
 
   // Enables offline use and makes Chrome offer "Install app". Silently skipped on file://.
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
