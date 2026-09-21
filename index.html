@@ -396,7 +396,8 @@
 
   // Parses CSV/TSV roster text and replaces the roster. Shared by paste and file import.
   function importRosterText(text){
-    text = String(text || '').replace(/^\uFEFF/, '');   // strip BOM from Excel/Sheets exports
+    // Strip a byte-order mark, including the garbled "ï»¿" form some apps save it as
+    text = String(text || '').replace(/^(\uFEFF|\u00EF\u00BB\u00BF)/, '');
     var rows = parseDelimited(text);
     if (rows.length < 2) throw new Error('Need a header row plus at least one player');
     var header = rows[0].map(function(h){ return h.trim().toLowerCase(); });
@@ -680,8 +681,8 @@
     list.forEach(function(p){
       rows.push([p.number || '', p.name].concat(LINEUPS.map(function(k){ return p[k] ? 'x' : ''; })));
     });
-    // BOM so Excel reads names with accents correctly; the importer strips it back off
-    return '\uFEFF' + rows.map(function(r){ return r.map(cell).join(','); }).join('\r\n') + '\r\n';
+    // Plain UTF-8, no byte-order mark: many viewers show a BOM as junk like "ï»¿"
+    return rows.map(function(r){ return r.map(cell).join(','); }).join('\r\n') + '\r\n';
   }
 
   function isIOS(){
@@ -1249,7 +1250,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v32<br><span class="diag">' + diagLine() + '</span></div>' +
+      '<div class="buildtag">Build v33<br><span class="diag">' + diagLine() + '</span></div>' +
       '</div>';
   }
 
