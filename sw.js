@@ -1,5 +1,5 @@
 // Bump this version whenever index.html changes so phones pick up the new build.
-const CACHE = 'snapcount-v24';
+const CACHE = 'snapcount-v32';
 
 const ASSETS = [
   './',
@@ -36,7 +36,7 @@ self.addEventListener('fetch', function(e){
 
   var url = new URL(req.url);
 
-  // Roster imports must always hit the network — never serve a stale roster from cache.
+  // Cross-origin requests (Google Fonts) go straight to the network; the app itself makes none.
   if (url.origin !== self.location.origin){
     e.respondWith(fetch(req).catch(function(){
       return new Response('', { status: 503, statusText: 'Offline' });

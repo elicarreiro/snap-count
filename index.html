@@ -103,6 +103,8 @@
   .overlay textarea{width:100%;height:220px;background:var(--surface-2);border:1px solid var(--line);
     border-radius:9px;color:var(--chalk);padding:10px;font-size:12.5px;
     font-family:ui-monospace,Menlo,monospace;white-space:pre;resize:vertical;}
+  .imgpreview{display:block;width:100%;max-height:62vh;object-fit:contain;border-radius:8px;
+    background:#fff;-webkit-touch-callout:default;user-select:auto;}
   .sheettitle{font-family:'Oswald';font-weight:700;font-size:16px;margin-bottom:12px;letter-spacing:.3px;}
   .sharelist{display:flex;flex-direction:column;gap:7px;}
   .shareopt{display:flex;align-items:center;gap:11px;width:100%;padding:13px 14px;border-radius:11px;
@@ -147,7 +149,7 @@
   .sort-btn.active{background:var(--flag);color:#1A1300;border-color:var(--flag);}
 
   .scrollbody{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
-    overscroll-behavior:contain;}
+    overscroll-behavior:contain;padding-top:8px;}
   .list{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;
     overscroll-behavior:contain;padding:2px 12px 14px;}
   .empty{text-align:center;color:var(--muted);padding:60px 20px;font-size:14px;line-height:1.6;}
@@ -217,7 +219,29 @@
   .sheetbox textarea{width:100%;min-height:96px;background:var(--surface-2);border:1px solid var(--line);
     border-radius:9px;color:var(--chalk);padding:9px 10px;font-size:12.5px;font-family:ui-monospace,Menlo,monospace;
     resize:vertical;white-space:pre;}
-  .sheetbox .openlink{display:inline-block;margin-top:8px;font-size:11.5px;color:var(--muted);text-decoration:underline;}
+  .exportbtn{display:flex;align-items:center;gap:11px;width:calc(100% - 28px);margin:0 14px 8px;
+    padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);
+    color:var(--chalk);text-align:left;font-size:14px;font-weight:600;}
+  .exportbtn svg{flex-shrink:0;color:var(--flag);}
+  .exportbtn small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);margin-top:2px;}
+  .exportbtn:active{transform:scale(.98);}
+  .sheetbox.panel{padding:0;margin-bottom:8px;}
+  .panelhead{display:flex;align-items:center;justify-content:space-between;width:100%;
+    padding:13px 14px;background:transparent;border:none;color:var(--chalk);
+    font-size:14px;font-weight:600;text-align:left;}
+  .panelhead svg{color:var(--muted);transition:transform .15s;}
+  .panel.open .panelhead svg{transform:rotate(180deg);}
+  .panelbody{padding:0 12px 12px;}
+  .csvwrap{overflow-x:auto;margin:2px 0 10px;border:1px solid var(--line);border-radius:8px;}
+  .csvtable{border-collapse:collapse;width:100%;font-size:11px;font-family:ui-monospace,Menlo,monospace;}
+  .csvtable th,.csvtable td{padding:5px 6px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--line);}
+  .csvtable th{color:var(--flag);font-weight:700;background:var(--surface-2);}
+  .csvtable td{color:var(--chalk);}
+  .csvtable tr:last-child td{border-bottom:none;}
+  .csvnotes{margin:0 0 8px;padding-left:17px;font-size:12px;color:var(--muted);line-height:1.5;}
+  .csvnotes li{margin-bottom:4px;}
+  .csvnotes b{color:var(--chalk);font-weight:600;}
+  .csvwarn{margin:0 0 2px !important;font-size:11.5px !important;}
   .impmsg{margin-top:9px;font-size:12px;font-weight:600;line-height:1.5;}
   .impmsg.ok{color:var(--green);}
   .impmsg.err{color:var(--red);}
@@ -254,6 +278,7 @@
 <div id="app"></div>
 <!-- iOS has no Vibration API; toggling a switch control is what pokes the Taptic Engine -->
 <label id="haptic-label" for="haptic-switch" aria-hidden="true"><input type="checkbox" switch id="haptic-switch" tabindex="-1"></label>
+<input type="file" id="roster-file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" hidden>
 
 <script>
 (function(){
@@ -284,7 +309,6 @@
 
   var LINEUPS = ['O1','O2','O3','D1','D2','D3'];
 
-  var DEFAULT_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1lYdP_u_sS_RB4D9PMhNPjpbw96adf2AkMtuVQLjBzn4/edit?gid=1279709354#gid=1279709354';
 
   var state = {
     screen: 'main',
@@ -294,15 +318,26 @@
     history: [],
     totalSnaps: 0,
     quarter: 1,
-    quarterSnaps: [0,0,0,0],
-    sheetUrl: DEFAULT_SHEET_URL
+    quarterSnaps: [0,0,0,0]
   };
 
   var importMsg = null; // { text, ok } — transient, not persisted
   var pasteDraft = '';  // keeps textarea contents across re-renders
   var pendingAction = null; // 'import' | 'newgame' — in-app confirm, since sandboxed pages block confirm()
   var copyFallback = null;
-  var shareOpen = false;  // report text shown for manual copying if clipboard access is blocked
+  var shareOpen = false;
+  var preparedImage = null;   // rendered when the share sheet opens, so a tap can share instantly
+  var imagePreview = null;    // data URL shown when the native share sheet isn't available
+  var pendingFile = null;
+  var openPanels = { paste: false, file: false };
+  // A panel is forced open while it has a confirmation pending or a result to show,
+  // so a collapsed panel can never hide a question or an error.
+  function panelOpen(k){
+    if (openPanels[k]) return true;
+    if (k === 'paste' && pendingAction === 'import') return true;
+    if (k === 'file' && pendingAction === 'file') return true;
+    return !!(importMsg && importMsg.scope === k);
+  }   // { name, text } picked but not yet confirmed  // report text shown for manual copying if clipboard access is blocked
   var toastMsg = null;
   var toastTimer = null;
 
@@ -316,9 +351,11 @@
     copy:  '<rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path>',
     share: '<path d="M12 16V4"></path><path d="M8 8l4-4 4 4"></path><path d="M5 14v5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5"></path>',
     csv:   '<path d="M12 4v11"></path><path d="M8 11l4 4 4-4"></path><path d="M5 19h14"></path>',
+    image: '<rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="9" cy="10" r="1.8"></circle><path d="M21 16l-5-5-8 8"></path>',
     settings: '<path d="M4 7h10"></path><path d="M18 7h2"></path><path d="M4 17h6"></path><path d="M14 17h6"></path>' +
               '<circle cx="16" cy="7" r="2.2"></circle><circle cx="12" cy="17" r="2.2"></circle>',
-    back:  '<path d="M15 5l-7 7 7 7"></path>'
+    back:  '<path d="M15 5l-7 7 7 7"></path>',
+    chev:  '<path d="M6 9l6 6 6-6"></path>'
   };
 
   // Haptic tap. Android/Chrome has the Vibration API; iOS Safari never implemented it,
@@ -355,6 +392,22 @@
     render();
     clearTimeout(toastTimer);
     toastTimer = setTimeout(function(){ toastMsg = null; render(); }, 2200);
+  }
+
+  // Parses CSV/TSV roster text and replaces the roster. Shared by paste and file import.
+  function importRosterText(text){
+    text = String(text || '').replace(/^\uFEFF/, '');   // strip BOM from Excel/Sheets exports
+    var rows = parseDelimited(text);
+    if (rows.length < 2) throw new Error('Need a header row plus at least one player');
+    var header = rows[0].map(function(h){ return h.trim().toLowerCase(); });
+    if (!header.some(function(h){ return h.indexOf('name')>-1; })) throw new Error('No "Name" column found in the first row');
+    return replaceFromRows(header, rows.slice(1), function(row, idx){
+      return idx < 0 ? '' : (row[idx] || '').trim();
+    });
+  }
+  function importResultText(r){
+    return 'Roster replaced: ' + r.total + ' player' + (r.total===1?'':'s') + ' (' + r.added + ' new, ' +
+      r.kept + ' kept with play counts, ' + r.removed + ' removed).' + overNote(r);
   }
 
   // Temporary: reports the real measurements so bottom-spacing issues can be
@@ -424,6 +477,159 @@
            head + '\n' + lines.join('\n') + '\n\n' + snaps;
   }
 
+  // ---------- shareable image report ----------
+  // Drawn with <canvas> on-device: no library, works offline, nothing leaves the phone.
+  // Light theme on purpose — it reads better in email and bright chat apps.
+  var IMG = {
+    bg:'#FFFFFF', ink:'#18201B', muted:'#6B7A70', line:'#E3E8E4', head:'#F2F5F2', stripe:'#FAFBFA',
+    green:'#23864F', greenBg:'#E3F3E9', orange:'#C46A12', orangeBg:'#FBEEDD', red:'#C53B25', redBg:'#FBE5E1'
+  };
+  var IMG_FONT = '"Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
+  function rr(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function fitText(ctx, text, maxW){
+    if (ctx.measureText(text).width <= maxW) return text;
+    var t = text;
+    while (t.length > 1 && ctx.measureText(t + '\u2026').width > maxW) t = t.slice(0, -1);
+    return t + '\u2026';
+  }
+
+  function drawReportCanvas(){
+    var list = sortedPlayers();
+    var S = 2;                         // render at 2x so it's crisp on retina screens
+    var W = 720, PAD = 28;
+    var ROW = 38, HEAD = 34, TEAM = 42;
+    var TOP = 104;
+    var H = TOP + HEAD + list.length * ROW + TEAM + 58;
+
+    // column layout (left edges); Q columns and total are centered in their cells
+    var cNum = PAD, wNum = 54;
+    var wQ = 58, wTot = 82;
+    var cTot = W - PAD - wTot;
+    var cQ = cTot - 4 * wQ;
+    var cName = cNum + wNum, wName = cQ - cName - 10;
+
+    var canvas = document.createElement('canvas');
+    canvas.width = W * S; canvas.height = H * S;
+    var ctx = canvas.getContext('2d');
+    ctx.scale(S, S);
+    ctx.textBaseline = 'middle';
+
+    ctx.fillStyle = IMG.bg; ctx.fillRect(0, 0, W, H);
+
+    // title block
+    ctx.fillStyle = IMG.ink;
+    ctx.font = '800 26px ' + IMG_FONT;
+    ctx.fillText('Wilton Warrior Play Counts', PAD, 44);
+    ctx.fillStyle = IMG.muted;
+    ctx.font = '500 15px ' + IMG_FONT;
+    ctx.fillText(todayStr() + '  \u00B7  ' + state.totalSnaps + ' team snaps', PAD, 74);
+
+    // header row
+    var y = TOP;
+    ctx.fillStyle = IMG.head; rr(ctx, PAD - 8, y, W - 2 * PAD + 16, HEAD, 8); ctx.fill();
+    ctx.fillStyle = IMG.muted;
+    ctx.font = '700 12px ' + IMG_FONT;
+    ctx.textAlign = 'left';
+    ctx.fillText('#', cNum, y + HEAD / 2);
+    ctx.fillText('PLAYER', cName, y + HEAD / 2);
+    ctx.textAlign = 'center';
+    ['Q1','Q2','Q3','Q4'].forEach(function(q, i){ ctx.fillText(q, cQ + i * wQ + wQ / 2, y + HEAD / 2); });
+    ctx.fillText('TOTAL', cTot + wTot / 2, y + HEAD / 2);
+    y += HEAD;
+
+    // player rows
+    list.forEach(function(p, idx){
+      var mid = y + ROW / 2;
+      if (idx % 2 === 1){ ctx.fillStyle = IMG.stripe; ctx.fillRect(PAD - 8, y, W - 2 * PAD + 16, ROW); }
+
+      ctx.textAlign = 'left';
+      ctx.fillStyle = IMG.muted;
+      ctx.font = '700 15px ' + IMG_FONT;
+      ctx.fillText(p.number ? '#' + p.number : '\u2014', cNum, mid);
+
+      ctx.fillStyle = IMG.ink;
+      ctx.font = '600 16px ' + IMG_FONT;
+      ctx.fillText(fitText(ctx, p.name, wName), cName, mid);
+
+      var q = p.q || [0,0,0,0];
+      ctx.textAlign = 'center';
+      ctx.font = '500 16px ' + IMG_FONT;
+      q.forEach(function(v, i){
+        ctx.fillStyle = v ? IMG.ink : '#B4BFB8';
+        ctx.fillText(String(v), cQ + i * wQ + wQ / 2, mid);
+      });
+
+      // total as a tinted pill, colored by status
+      var st = statusColor(p.plays);
+      var fg = st === 'green' ? IMG.green : st === 'orange' ? IMG.orange : IMG.red;
+      var bgc = st === 'green' ? IMG.greenBg : st === 'orange' ? IMG.orangeBg : IMG.redBg;
+      var pw = 60, ph = 26;
+      ctx.fillStyle = bgc; rr(ctx, cTot + (wTot - pw) / 2, mid - ph / 2, pw, ph, 13); ctx.fill();
+      ctx.fillStyle = fg;
+      ctx.font = '800 16px ' + IMG_FONT;
+      ctx.fillText(p.plays >= 14 ? p.plays + ' \u2713' : String(p.plays), cTot + wTot / 2, mid + 0.5);
+
+      y += ROW;
+    });
+
+    // team snaps row
+    ctx.strokeStyle = IMG.ink; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(PAD - 8, y + 1); ctx.lineTo(W - PAD + 8, y + 1); ctx.stroke();
+    var tm = y + TEAM / 2 + 1;
+    ctx.textAlign = 'left';
+    ctx.fillStyle = IMG.ink;
+    ctx.font = '700 15px ' + IMG_FONT;
+    ctx.fillText('Team snaps', cNum, tm);
+    ctx.textAlign = 'center';
+    ctx.font = '700 16px ' + IMG_FONT;
+    state.quarterSnaps.forEach(function(v, i){ ctx.fillText(String(v), cQ + i * wQ + wQ / 2, tm); });
+    ctx.font = '800 16px ' + IMG_FONT;
+    ctx.fillText(String(state.totalSnaps), cTot + wTot / 2, tm);
+    y += TEAM;
+
+    // legend
+    ctx.textAlign = 'left';
+    ctx.font = '500 12.5px ' + IMG_FONT;
+    var lx = PAD, ly = y + 30;
+    [['14+ plays', IMG.green], ['10\u201313', IMG.orange], ['Under 10', IMG.red]].forEach(function(item){
+      ctx.fillStyle = item[1];
+      ctx.beginPath(); ctx.arc(lx + 5, ly, 5, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = IMG.muted;
+      ctx.fillText(item[0], lx + 15, ly);
+      lx += 15 + ctx.measureText(item[0]).width + 22;
+    });
+    ctx.textAlign = 'right';
+    ctx.fillText('Minimum 14 plays per player', W - PAD, ly);
+
+    return canvas;
+  }
+
+  // Resolves to { file, url } — the File for the share sheet, a data URL for preview.
+  function prepareImage(){
+    var ready = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+    return ready.then(function(){
+      var canvas = drawReportCanvas();
+      var url = canvas.toDataURL('image/png');
+      return new Promise(function(resolve){
+        canvas.toBlob(function(blob){
+          var name = 'play-counts-' + todayStr().replace(/[^0-9A-Za-z]+/g,'-').toLowerCase() + '.png';
+          var file = null;
+          try{ file = new File([blob], name, { type: 'image/png' }); } catch(e){}
+          resolve({ file: file, url: url });
+        }, 'image/png');
+      });
+    });
+  }
+
   function buildCSV(){
     var rows = [['Jersey','Name','Q1','Q2','Q3','Q4','Total']];
     sortedPlayers().forEach(function(p){
@@ -458,6 +664,48 @@
       document.body.removeChild(ta);
       return !!ok;
     } catch(e){ return false; }
+  }
+
+  // Roster + lineup assignments in exactly the format the CSV importer reads,
+  // so an export can be re-imported later unchanged. Sorted by jersey number.
+  function buildRosterCSV(){
+    var cell = function(v){
+      v = String(v == null ? '' : v);
+      return /[",\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v;
+    };
+    var list = state.players.slice().sort(function(a,b){
+      return (parseInt(a.number)||9999) - (parseInt(b.number)||9999) || a.name.localeCompare(b.name);
+    });
+    var rows = [['Jersey #','Name'].concat(LINEUPS)];
+    list.forEach(function(p){
+      rows.push([p.number || '', p.name].concat(LINEUPS.map(function(k){ return p[k] ? 'x' : ''; })));
+    });
+    // BOM so Excel reads names with accents correctly; the importer strips it back off
+    return '\uFEFF' + rows.map(function(r){ return r.map(cell).join(','); }).join('\r\n') + '\r\n';
+  }
+
+  function isIOS(){
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  // Downloads a file. On iOS, where downloads from an installed web app are unreliable,
+  // it hands the file to the share sheet instead, which offers "Save to Files".
+  // Must be called straight from a tap: iOS only opens the share sheet on a user gesture.
+  function saveFile(content, filename, mime){
+    if (isIOS()){
+      try{
+        var file = new File([content], filename, { type: mime });
+        if (navigator.canShare && navigator.canShare({ files: [file] })){
+          navigator.share({ files: [file], title: filename }).catch(function(e){
+            if (e && e.name === 'AbortError') return;
+            if (!downloadCSV(content, filename)) toast('Couldn\u2019t save the file');
+          });
+          return true;
+        }
+      } catch(e){}
+    }
+    return downloadCSV(content, filename);
   }
 
   function downloadCSV(csv, filename){
@@ -609,7 +857,10 @@
     openShare: function(){
       if (!state.players.length){ toast('No players on the roster yet.'); return; }
       shareOpen = true; render();
+      preparedImage = null;
+      prepareImage().then(function(img){ preparedImage = img; }).catch(function(){});
     },
+    closeImagePreview: function(){ imagePreview = null; render(); },
     closeShare: function(){ shareOpen = false; render(); },
 
     shareVia: async function(how){
@@ -630,6 +881,22 @@
         catch(e){ /* user dismissed, or share unavailable */ }
         return;
       }
+      if (how === 'image'){
+        var sendImage = function(img){
+          shareOpen = false; render();
+          if (img.file && navigator.canShare && navigator.canShare({ files: [img.file] })){
+            navigator.share({ files: [img.file], title: subject }).catch(function(e){
+              if (e && e.name === 'AbortError') return;      // user closed the share sheet
+              imagePreview = img.url; render();              // share refused: show it to save
+            });
+          } else {
+            imagePreview = img.url; render();
+          }
+        };
+        if (preparedImage){ sendImage(preparedImage); }
+        else { prepareImage().then(sendImage).catch(function(){ shareOpen = false; toast('Couldn\u2019t create the image'); }); }
+        return;
+      }
       if (how === 'csv'){
         shareOpen = false;
         var name = 'play-counts-' + todayStr().replace(/[^0-9A-Za-z]+/g,'-').toLowerCase() + '.csv';
@@ -643,72 +910,6 @@
 
     closeCopyFallback: function(){ copyFallback = null; render(); },
 
-    importFromSheet: async function(){
-      var input = document.getElementById('sheet-url');
-      var url = (input ? input.value : state.sheetUrl).trim();
-      state.sheetUrl = url;
-      var m = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
-      if (!m){
-        pendingAction = null;
-        importMsg = { text: 'That doesn\u2019t look like a Google Sheets link.', ok: false, scope: 'fetch' };
-        render(); return;
-      }
-      if (state.players.length && pendingAction !== 'fetch'){
-        pendingAction = 'fetch';
-        importMsg = { text: 'This replaces the roster and lineups with the sheet. Play counts are kept for jersey numbers still on it. Tap again to confirm.', ok: null, scope: 'fetch' };
-        render(); return;
-      }
-      importMsg = { text: 'Fetching from sheet\u2026', ok: null, scope: 'fetch' };
-      render();
-
-      var id = m[1];
-      // Google sends no CORS headers, so a browser can't read the sheet directly.
-      // opensheet.elk.sh fetches it server-side and returns JSON with CORS allowed.
-      var attempts = [
-        'https://opensheet.elk.sh/' + id + '/1',
-        'https://opensheet.elk.sh/' + id + '/Roster'
-      ];
-      var lastErr = 'request blocked';
-
-      for (var i = 0; i < attempts.length; i++){
-        try{
-          var res = await fetch(attempts[i]);
-          if (!res.ok){
-            var why = res.status === 404 ? 'tab not found' : ('HTTP ' + res.status);
-            throw new Error(why);
-          }
-          var data = await res.json();
-          if (data && data.error) throw new Error(String(data.error));
-          if (!Array.isArray(data) || !data.length) throw new Error('sheet had no player rows');
-
-          // The relay omits keys for empty cells, so a column that's blank on the first
-          // row would go missing. Union the keys across every row to catch them all.
-          var keys = [];
-          data.forEach(function(row){
-            Object.keys(row).forEach(function(k){
-              if (keys.indexOf(k) === -1) keys.push(k);
-            });
-          });
-          var header = keys.map(function(k){ return k.trim().toLowerCase(); });
-          var r = replaceFromRows(header, data, function(row, idx){
-            if (idx < 0) return '';
-            var v = row[keys[idx]];
-            return v == null ? '' : String(v).trim();
-          });
-          pendingAction = null;
-          scheduleSave();
-          importMsg = { text: 'Roster replaced from sheet: ' + r.total + ' player' + (r.total===1?'':'s') + ' (' + r.added + ' new, ' + r.kept + ' kept with play counts, ' + r.removed + ' removed).' + overNote(r), ok: r.over.length ? null : true, scope: 'fetch' };
-          render();
-          return;
-        } catch(e){
-          lastErr = (e && e.message) ? e.message : 'request blocked';
-        }
-      }
-
-      pendingAction = null;
-      importMsg = { text: 'Couldn\u2019t reach the sheet (' + lastErr + '). Make sure it\u2019s shared as \u201cAnyone with the link can view.\u201d If this page can\u2019t make outside requests, use the paste method above \u2014 it always works.', ok: false, scope: 'fetch' };
-      render();
-    },
 
     snap: function(){
       if (!state.selected.length) return;
@@ -785,7 +986,44 @@
       scheduleSave(); render();
     },
 
-    cancelPending: function(){ pendingAction = null; render(); },
+    togglePanel: function(k){
+      var wasOpen = panelOpen(k);
+      openPanels[k] = !wasOpen;
+      if (wasOpen){
+        // collapsing also clears anything that was pinning it open
+        if (importMsg && importMsg.scope === k) importMsg = null;
+        if ((k === 'paste' && pendingAction === 'import') || (k === 'file' && pendingAction === 'file')){
+          pendingAction = null; pendingFile = null;
+        }
+      }
+      render();
+    },
+    cancelPending: function(){ pendingAction = null; pendingFile = null; render(); },
+
+    exportRoster: function(){
+      if (!state.players.length){ toast('No players on the roster yet.'); return; }
+      var name = 'snap-count-roster-' + todayStr().replace(/[^0-9A-Za-z]+/g,'-').toLowerCase() + '.csv';
+      var ok = saveFile(buildRosterCSV(), name, 'text/csv');
+      if (!ok) toast('Couldn\u2019t save the file');
+      else if (!isIOS()) toast('Roster CSV saved');
+    },
+    pickFile: function(){
+      var inp = document.getElementById('roster-file');
+      if (inp){ inp.value = ''; inp.click(); }
+    },
+    confirmFile: function(){
+      if (!pendingFile) return;
+      try{
+        var r = importRosterText(pendingFile.text);
+        scheduleSave();
+        importMsg = { text: importResultText(r), ok: r.over.length ? null : true, scope: 'file' };
+      } catch(e){
+        importMsg = { text: 'Couldn\u2019t read ' + esc(pendingFile.name) + ': ' + ((e && e.message) ? e.message : 'unrecognized format') + '.', ok: false, scope: 'file' };
+      }
+      pendingFile = null;
+      pendingAction = null;
+      render();
+    },
 
     importPaste: function(){
       var ta = document.getElementById('paste-data');
@@ -954,34 +1192,55 @@
         '</div>' +
       '</div>' +
       '<div class="scrollbody">' +
-      '<div class="summary">' + summary + '</div>' +
       '<button class="newgame' + (pendingAction==='newgame'?' danger':'') + '" onclick="app.newGame()">' +
         (pendingAction==='newgame' ? '\u26A0 Tap again to reset all play counts to 0' : '\u21BB Start new game (reset all play counts)') +
       '</button>' +
       (pendingAction==='newgame' ? '<button class="newgame cancel" onclick="app.cancelPending()">Cancel</button>' : '') +
-      '<div class="sectitle">Import roster \u2014 paste from sheet</div>' +
-      '<div class="sheetbox">' +
+      '<div class="sectitle">Import / export roster</div>' +
+      '<div class="sheetbox panel' + (panelOpen('paste') ? ' open' : '') + '">' +
+        '<button class="panelhead" onclick="app.togglePanel(\'paste\')">' +
+          '<span>Paste from sheet</span>' + icn(ICONS.chev) +
+        '</button>' +
+        (panelOpen('paste') ? '<div class="panelbody">' +
         '<p>Copy the roster from your sheet, header row included. Replaces the current roster.</p>' +
-        '<textarea id="paste-data" placeholder="Jersey #&#9;Name&#9;O1&#9;O2&#9;O3&#9;D1&#9;D2&#9;D3&#10;15&#9;Henry Carreiro&#9;x&#9;&#9;&#9;x">' + esc(pasteDraft) + '</textarea>' +
+        '<textarea id="paste-data" placeholder="Jersey #&#9;Name&#9;O1&#9;O2&#9;O3&#9;D1&#9;D2&#9;D3&#10;15&#9;Sam Rivera&#9;x&#9;&#9;&#9;x">' + esc(pasteDraft) + '</textarea>' +
         '<button class="impbtn wide' + (pendingAction==='import'?' danger':'') + '" onclick="app.importPaste()">' +
           (pendingAction==='import' ? '\u26A0 Tap again to replace roster' : 'Import pasted roster') +
         '</button>' +
         (pendingAction==='import' ? '<button class="impbtn wide ghost" onclick="app.cancelPending()">Cancel</button>' : '') +
         (importMsg && importMsg.scope === 'paste' ? '<div class="impmsg ' + (importMsg.ok===true?'ok':importMsg.ok===false?'err':'') + '">' + importMsg.text + '</div>' : '') +
+        '</div>' : '') +
       '</div>' +
-      '<div class="sectitle">Your sheet</div>' +
-      '<div class="sheetbox">' +
-        '<p>Sheet must be shared as \u201canyone with the link can view.\u201d Reads via opensheet.elk.sh.</p>' +
-        '<div class="row1">' +
-          '<input id="sheet-url" value="' + esc(state.sheetUrl) + '" placeholder="Google Sheet link">' +
-        '</div>' +
-        '<button class="impbtn wide' + (pendingAction==='fetch'?' danger':'') + '" onclick="app.importFromSheet()">' +
-          (pendingAction==='fetch' ? '\u26A0 Tap again to replace roster' : 'Import directly from sheet') +
+      '<div class="sheetbox panel' + (panelOpen('file') ? ' open' : '') + '">' +
+        '<button class="panelhead" onclick="app.togglePanel(\'file\')">' +
+          '<span>Upload CSV file</span>' + icn(ICONS.chev) +
         '</button>' +
-        (pendingAction==='fetch' ? '<button class="impbtn wide ghost" onclick="app.cancelPending()">Cancel</button>' : '') +
-        (importMsg && importMsg.scope === 'fetch' ? '<div class="impmsg ' + (importMsg.ok===true?'ok':importMsg.ok===false?'err':'') + '">' + importMsg.text + '</div>' : '') +
-        '<a class="openlink" href="' + esc(state.sheetUrl) + '" target="_blank" rel="noopener">Open sheet &#8599;</a>' +
+        (panelOpen('file') ? '<div class="panelbody">' +
+        '<p>Row 1 must be the column headers:</p>' +
+        '<div class="csvwrap"><table class="csvtable">' +
+          '<tr><th>Jersey #</th><th>Name</th><th>O1</th><th>O2</th><th>O3</th><th>D1</th><th>D2</th><th>D3</th></tr>' +
+          '<tr><td>15</td><td>Sam R.</td><td>x</td><td></td><td></td><td>x</td><td></td><td></td></tr>' +
+          '<tr><td>4</td><td>Alex K.</td><td></td><td>x</td><td></td><td></td><td></td><td>x</td></tr>' +
+        '</table></div>' +
+        '<ul class="csvnotes">' +
+          '<li>Put any mark (like <b>x</b>) in a lineup column to assign that player. Leave it blank if not.</li>' +
+          '<li>Only <b>Name</b> is required. Jersey # is how play counts carry over when you re-import.</li>' +
+          '<li>Column order doesn\u2019t matter, and extra columns are ignored.</li>' +
+          '<li>From Google Sheets: <b>File \u2192 Download \u2192 CSV</b>. In the phone app: <b>\u22EE \u2192 Share &amp; export \u2192 Send a copy \u2192 CSV</b>, then Save to Files.</li>' +
+        '</ul>' +
+        '<p class="csvwarn">Replaces the current roster. The file stays on your phone.</p>' +
+        (pendingAction==='file'
+          ? '<button class="impbtn wide danger" onclick="app.confirmFile()">\u26A0 Replace roster</button>' +
+            '<button class="impbtn wide ghost" onclick="app.cancelPending()">Cancel</button>'
+          : '<button class="impbtn wide" onclick="app.pickFile()">Choose CSV file</button>') +
+        (importMsg && importMsg.scope === 'file' ? '<div class="impmsg ' + (importMsg.ok===true?'ok':importMsg.ok===false?'err':'') + '">' + importMsg.text + '</div>' : '') +
+        '</div>' : '') +
       '</div>' +
+      '<button class="exportbtn" onclick="app.exportRoster()">' + icn(ICONS.csv) +
+        '<span>Download roster CSV<small>Players and lineup assignments, ready to re-import</small></span>' +
+      '</button>' +
+      '<div class="sectitle">Lineups</div>' +
+      '<div class="summary">' + summary + '</div>' +
       '<div class="sectitle">Add player</div>' +
       '<div class="addform">' +
         '<input class="num" id="new-number" placeholder="#" inputmode="numeric">' +
@@ -990,7 +1249,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v24<br><span class="diag">' + diagLine() + '</span></div>' +
+      '<div class="buildtag">Build v32<br><span class="diag">' + diagLine() + '</span></div>' +
       '</div>';
   }
 
@@ -1022,11 +1281,22 @@
         '<div class="sheet" onclick="event.stopPropagation()">' +
           '<div class="sheettitle">Share play counts</div>' +
           '<div class="sharelist">' +
+            '<button class="shareopt" onclick="app.shareVia(\'image\')">' + icn(ICONS.image) + 'Share as image</button>' +
             '<button class="shareopt" onclick="app.shareVia(\'copy\')">' + icn(ICONS.copy) + 'Copy to clipboard</button>' +
             (canShare ? '<button class="shareopt" onclick="app.shareVia(\'share\')">' + icn(ICONS.share) + 'Share\u2026</button>' : '') +
             '<button class="shareopt" onclick="app.shareVia(\'csv\')">' + icn(ICONS.csv) + 'Save as CSV</button>' +
           '</div>' +
           '<button class="impbtn ghostwide" onclick="app.closeShare()">Cancel</button>' +
+        '</div>' +
+      '</div>';
+    }
+    if (imagePreview){
+      extra += '<div class="overlay" onclick="app.closeImagePreview()">' +
+        '<div class="sheet" onclick="event.stopPropagation()">' +
+          '<div class="sheettitle">Play counts image</div>' +
+          '<p>Press and hold the image to save or share it.</p>' +
+          '<img class="imgpreview" src="' + imagePreview + '" alt="Play counts table">' +
+          '<button class="impbtn ghostwide" onclick="app.closeImagePreview()">Done</button>' +
         '</div>' +
       '</div>';
     }
@@ -1055,8 +1325,26 @@
       var p = find(id);
       if (p){ p[field] = t.value; scheduleSave(); }
     }
-    if (t.id === 'sheet-url'){ state.sheetUrl = t.value; scheduleSave(); }
     if (t.id === 'paste-data'){ pasteDraft = t.value; }
+  });
+
+  // Reads a picked roster file entirely on-device — nothing is uploaded anywhere.
+  document.getElementById('roster-file').addEventListener('change', function(e){
+    var f = e.target.files && e.target.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      pendingFile = { name: f.name, text: String(reader.result || '') };
+      if (!state.players.length){ app.confirmFile(); return; }
+      pendingAction = 'file';
+      importMsg = { text: 'Replace the roster with ' + esc(f.name) + '? Anyone not in the file is removed; play counts are kept for jersey numbers still on it.', ok: null, scope: 'file' };
+      render();
+    };
+    reader.onerror = function(){
+      importMsg = { text: 'Couldn\u2019t open that file.', ok: false, scope: 'file' };
+      render();
+    };
+    reader.readAsText(f);
   });
 
   // ---------- init ----------
@@ -1078,7 +1366,6 @@
           state.players.forEach(function(p){
             if (!Array.isArray(p.q) || p.q.length !== 4){ p.q = [p.plays || 0, 0, 0, 0]; }
           });
-          state.sheetUrl = typeof loaded.sheetUrl === 'string' && loaded.sheetUrl ? loaded.sheetUrl : DEFAULT_SHEET_URL;
         }
       }catch(e){}
     }
