@@ -269,6 +269,10 @@
   .buildtag{text-align:center;color:var(--muted);opacity:.55;font-size:11px;padding:14px 0 44px;
     letter-spacing:.06em;line-height:1.7;}
   .diag{font-size:10px;opacity:.8;}
+  .updatelink{background:none;border:none;padding:0;font-family:inherit;font-size:11px;
+    color:var(--muted);text-decoration:underline;letter-spacing:.06em;}
+  .updatelink.force{margin-top:5px;color:var(--orange);opacity:.9;}
+  .updatemsg{display:inline-block;margin-top:5px;font-size:11px;color:var(--chalk);opacity:.85;}
   .backbtn{width:36px;height:36px;border-radius:9px;background:var(--surface-2);border:1px solid var(--line);
     color:var(--chalk);font-size:16px;}
   .sectitle{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;padding:14px 14px 2px;}
@@ -327,7 +331,11 @@
   var copyFallback = null;
   var shareOpen = false;
   var preparedImage = null;   // rendered when the share sheet opens, so a tap can share instantly
-  var imagePreview = null;    // data URL shown when the native share sheet isn't available
+  var imagePreview = null;
+  var swReg = null;                 // service worker registration, once it resolves
+  var reloadingForUpdate = false;
+  var updateMsg = null;             // text shown next to the build tag
+  var showForce = false;            // reveal the harder "force refresh" option    // data URL shown when the native share sheet isn't available
   var pendingFile = null;
   var openPanels = { paste: false, file: false };
   // A panel is forced open while it has a confirmation pending or a result to show,
@@ -1001,6 +1009,50 @@
     },
     cancelPending: function(){ pendingAction = null; pendingFile = null; render(); },
 
+    checkUpdate: async function(){
+      if (!('serviceWorker' in navigator) || location.protocol.indexOf('http') !== 0){
+        updateMsg = 'Updates only apply to the installed or hosted app.'; render(); return;
+      }
+      updateMsg = 'Checking\u2026'; showForce = false; render();
+      try{
+        var reg = swReg || await navigator.serviceWorker.getRegistration();
+        if (!reg){ updateMsg = 'No update system registered yet \u2014 reopen the app and try again.'; render(); return; }
+        await reg.update();
+        // A waiting or installing worker means a newer build is actually there.
+        if (reg.waiting || reg.installing){
+          updateMsg = 'Update found \u2014 reloading\u2026'; render();
+          if (reg.waiting && reg.waiting.postMessage) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          setTimeout(function(){ if (!reloadingForUpdate){ reloadingForUpdate = true; location.reload(); } }, 1200);
+          return;
+        }
+        updateMsg = 'You\u2019re on the latest version.';
+        showForce = true;
+        render();
+      } catch(e){
+        updateMsg = 'Couldn\u2019t check \u2014 no connection?';
+        showForce = true;
+        render();
+      }
+    },
+
+    forceRefresh: async function(){
+      if (navigator.onLine === false){
+        updateMsg = 'A force refresh needs a connection \u2014 it reloads everything from the server.';
+        render(); return;
+      }
+      updateMsg = 'Clearing and reloading\u2026'; render();
+      try{
+        if (window.caches && caches.keys){
+          var keys = await caches.keys();
+          await Promise.all(keys.map(function(k){ return caches.delete(k); }));
+        }
+        var regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(function(r){ return r.unregister(); }));
+      } catch(e){}
+      reloadingForUpdate = true;
+      location.replace(location.pathname + '?u=' + Date.now());
+    },
+
     exportRoster: function(){
       if (!state.players.length){ toast('No players on the roster yet.'); return; }
       var name = 'snap-count-roster-' + todayStr().replace(/[^0-9A-Za-z]+/g,'-').toLowerCase() + '.csv';
@@ -1250,7 +1302,10 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v33<br><span class="diag">' + diagLine() + '</span></div>' +
+      '<div class="buildtag">Build v34 \u00B7 <button class="updatelink" onclick="app.checkUpdate()">Check for updates</button>' +
+        (updateMsg ? '<br><span class="updatemsg">' + esc(updateMsg) + '</span>' : '') +
+        (showForce ? '<br><button class="updatelink force" onclick="app.forceRefresh()">Still stale? Force refresh (needs connection)</button>' : '') +
+        '<br><span class="diag">' + diagLine() + '</span></div>' +
       '</div>';
   }
 
@@ -1375,9 +1430,22 @@
   }).catch(function(){ render(); fitShell(); });
 
   // Enables offline use and makes Chrome offer "Install app". Silently skipped on file://.
+  // updateViaCache:'none' stops the browser serving sw.js from its own HTTP cache, which
+  // is what makes update checks miss a fresh deploy.
   if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0){
     window.addEventListener('load', function(){
-      navigator.serviceWorker.register('./sw.js').catch(function(){});
+      navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' })
+        .then(function(reg){
+          swReg = reg;
+          reg.update().catch(function(){});          // quiet check on every launch
+        })
+        .catch(function(){});
+    });
+    // A new worker taking control means new code is live — reload once to pick it up.
+    navigator.serviceWorker.addEventListener('controllerchange', function(){
+      if (reloadingForUpdate) return;
+      reloadingForUpdate = true;
+      location.reload();
     });
   }
 })();
