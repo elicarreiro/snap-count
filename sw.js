@@ -1,5 +1,5 @@
 // Bump this version whenever index.html changes so phones pick up the new build.
-const CACHE = 'snapcount-v33';
+const CACHE = 'snapcount-v34';
 
 const ASSETS = [
   './',
@@ -28,6 +28,11 @@ self.addEventListener('activate', function(e){
       }));
     }).then(function(){ return self.clients.claim(); })
   );
+});
+
+// Lets the page tell a waiting worker to take over immediately (Check for updates).
+self.addEventListener('message', function(e){
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('fetch', function(e){
