@@ -219,6 +219,21 @@
   .sheetbox textarea{width:100%;min-height:96px;background:var(--surface-2);border:1px solid var(--line);
     border-radius:9px;color:var(--chalk);padding:9px 10px;font-size:12.5px;font-family:ui-monospace,Menlo,monospace;
     resize:vertical;white-space:pre;}
+  .cfgrow{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:9px 2px;border-bottom:1px solid var(--line);}
+  .cfgrow:last-of-type{border-bottom:none;}
+  .cfgrow > span:first-child{font-size:14px;font-weight:600;color:var(--chalk);}
+  .cfgrow small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);margin-top:2px;}
+  .cfgtext{flex:0 1 190px;min-width:0;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:9px;color:var(--chalk);padding:9px 10px;font-size:14px;}
+  .stepper{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+  .stepper button{width:34px;height:34px;border-radius:9px;background:var(--surface-2);
+    border:1px solid var(--line);color:var(--chalk);font-size:17px;font-weight:700;line-height:1;}
+  .stepper button:active{transform:scale(.94);}
+  .stepper input{width:46px;text-align:center;background:var(--surface-2);border:1px solid var(--line);
+    border-radius:9px;color:var(--chalk);padding:8px 0;font-size:15px;font-weight:700;
+    font-family:'Oswald',inherit;}
+  .cfgnote{margin:10px 0 0 !important;font-size:11.5px !important;line-height:1.5;}
   .exportbtn{display:flex;align-items:center;gap:11px;width:calc(100% - 28px);margin:0 14px 8px;
     padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);
     color:var(--chalk);text-align:left;font-size:14px;font-weight:600;}
@@ -322,8 +337,19 @@
     history: [],
     totalSnaps: 0,
     quarter: 1,
-    quarterSnaps: [0,0,0,0]
+    quarterSnaps: [0,0,0,0],
+    teamName: 'Wilton Warriors',
+    minPlays: 14,
+    onField: 11
   };
+
+  // Everything that depends on the configurable numbers reads these, never a literal.
+  function minPlays(){ return state.minPlays; }
+  function onField(){ return state.onField; }
+  // "Close to the minimum" scales with it: 10 of 14 is the original amber band.
+  function warnPlays(){ return Math.max(1, Math.ceil(state.minPlays * 0.7)); }
+  function teamName(){ return (state.teamName || '').trim() || 'Team'; }
+  function reportTitle(){ return teamName() + ' Play Counts'; }
 
   var importMsg = null; // { text, ok } — transient, not persisted
   var pasteDraft = '';  // keeps textarea contents across re-renders
@@ -337,7 +363,7 @@
   var updateMsg = null;             // text shown next to the build tag
   var showForce = false;            // reveal the harder "force refresh" option    // data URL shown when the native share sheet isn't available
   var pendingFile = null;
-  var openPanels = { paste: false, file: false };
+  var openPanels = { paste: false, file: false, config: false };
   // A panel is forced open while it has a confirmation pending or a result to show,
   // so a collapsed panel can never hide a question or an error.
   function panelOpen(k){
@@ -477,12 +503,12 @@
       var q = p.q || [0,0,0,0];
       return ('#' + (p.number || '')).padEnd(numW) + '  ' + p.name.padEnd(nameW) + '  ' +
         q.map(function(v){ return String(v).padStart(3); }).join(' ') + ' ' +
-        String(p.plays).padStart(4) + (p.plays >= 14 ? '  \u2713' : '');
+        String(p.plays).padStart(4) + (p.plays >= minPlays() ? '  \u2713' : '');
     });
     var snaps = 'Team snaps  Q1 ' + state.quarterSnaps[0] + '  Q2 ' + state.quarterSnaps[1] +
                 '  Q3 ' + state.quarterSnaps[2] + '  Q4 ' + state.quarterSnaps[3] +
                 '  Total ' + state.totalSnaps;
-    return 'Wilton Warrior Play Counts\n' + todayStr() + '\n\n' +
+    return reportTitle() + '\n' + todayStr() + '\n\n' +
            head + '\n' + lines.join('\n') + '\n\n' + snaps;
   }
 
@@ -537,7 +563,7 @@
     // title block
     ctx.fillStyle = IMG.ink;
     ctx.font = '800 26px ' + IMG_FONT;
-    ctx.fillText('Wilton Warrior Play Counts', PAD, 44);
+    ctx.fillText(reportTitle(), PAD, 44);
     ctx.fillStyle = IMG.muted;
     ctx.font = '500 15px ' + IMG_FONT;
     ctx.fillText(todayStr() + '  \u00B7  ' + state.totalSnaps + ' team snaps', PAD, 74);
@@ -585,7 +611,7 @@
       ctx.fillStyle = bgc; rr(ctx, cTot + (wTot - pw) / 2, mid - ph / 2, pw, ph, 13); ctx.fill();
       ctx.fillStyle = fg;
       ctx.font = '800 16px ' + IMG_FONT;
-      ctx.fillText(p.plays >= 14 ? p.plays + ' \u2713' : String(p.plays), cTot + wTot / 2, mid + 0.5);
+      ctx.fillText(p.plays >= minPlays() ? p.plays + ' \u2713' : String(p.plays), cTot + wTot / 2, mid + 0.5);
 
       y += ROW;
     });
@@ -609,7 +635,12 @@
     ctx.textAlign = 'left';
     ctx.font = '500 12.5px ' + IMG_FONT;
     var lx = PAD, ly = y + 30;
-    [['14+ plays', IMG.green], ['10\u201313', IMG.orange], ['Under 10', IMG.red]].forEach(function(item){
+    // The amber band is warnPlays..minPlays-1; it can shrink to one number or vanish at small minimums
+    var lo = warnPlays(), hi = minPlays() - 1;
+    var legend = [[minPlays() + '+ plays', IMG.green]];
+    if (hi >= lo) legend.push([hi === lo ? String(lo) : lo + '\u2013' + hi, IMG.orange]);
+    if (lo > 0) legend.push(['Under ' + lo, IMG.red]);
+    legend.forEach(function(item){
       ctx.fillStyle = item[1];
       ctx.beginPath(); ctx.arc(lx + 5, ly, 5, 0, Math.PI * 2); ctx.fill();
       ctx.fillStyle = IMG.muted;
@@ -617,7 +648,7 @@
       lx += 15 + ctx.measureText(item[0]).width + 22;
     });
     ctx.textAlign = 'right';
-    ctx.fillText('Minimum 14 plays per player', W - PAD, ly);
+    ctx.fillText('Minimum ' + minPlays() + ' plays per player', W - PAD, ly);
 
     return canvas;
   }
@@ -789,14 +820,20 @@
     state.selected = state.selected.filter(function(id){ return validIds[id]; });
 
     // The sheet is the source of truth, so we import what it says — but a lineup with
-    // more than 11 can't take the field, so flag it rather than fixing it silently.
+    // more than a full lineup can't take the field, so flag it rather than fixing it silently.
     var over = [];
     LINEUPS.forEach(function(k){
       var n = next.filter(function(p){ return p[k]; }).length;
-      if (n > 11) over.push(k + ' has ' + n);
+      if (n > onField()) over.push(k + ' has ' + n);
     });
 
     return { total: next.length, kept: kept, added: next.length - kept, removed: removed, over: over };
+  }
+
+  function clampInt(v, lo, hi, dflt){
+    v = parseInt(v, 10);
+    if (!isFinite(v)) return dflt;
+    return Math.min(hi, Math.max(lo, v));
   }
 
   function uid(){ return 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -809,10 +846,10 @@
 
   function find(id){ return state.players.find(function(p){ return p.id === id; }); }
 
-  // Warning text appended to an import result when a lineup exceeds 11
+  // Warning text appended to an import result when a lineup exceeds the on-field count
   function overNote(r){
     if (!r.over || !r.over.length) return '';
-    return ' \u26A0 Over the 11-player limit: ' + r.over.join(', ') + '. Fix it in the sheet and re-import, or unassign players in the roster below.';
+    return ' \u26A0 Over the ' + onField() + '-player limit: ' + r.over.join(', ') + '. Fix it in the sheet and re-import, or unassign players in the roster below.';
   }
 
   // True when the on-field selection is exactly this lineup's members — no more, no fewer
@@ -823,8 +860,8 @@
   }
 
   function statusColor(plays){
-    if (plays >= 14) return 'green';
-    if (plays >= 10) return 'orange';
+    if (plays >= minPlays()) return 'green';
+    if (plays >= warnPlays()) return 'orange';
     return 'red';
   }
 
@@ -874,7 +911,7 @@
 
     shareVia: async function(how){
       var text = buildReport();
-      var subject = 'Wilton Warrior Play Counts \u2014 ' + todayStr();
+      var subject = reportTitle() + ' \u2014 ' + todayStr();
 
       if (how === 'copy'){
         var ok = await copyText(text);
@@ -922,7 +959,7 @@
 
     snap: function(){
       if (!state.selected.length) return;
-      if (state.selected.length > 11){ flashStatus(); return; }
+      if (state.selected.length > onField()){ flashStatus(); return; }
       var qi = state.quarter - 1;
       state.history.push({ ids: state.selected.slice(), q: qi });
       if (state.history.length > 50) state.history.shift();
@@ -974,7 +1011,7 @@
       var p = find(id); if (!p) return;
       if (!p[key]){
         var count = state.players.filter(function(pp){ return pp[key]; }).length;
-        if (count >= 11) return;
+        if (count >= onField()) return;
         p[key] = true;
       } else { p[key] = false; }
       scheduleSave(); render();
@@ -992,6 +1029,20 @@
       state.quarterSnaps = [0,0,0,0];
       state.quarter = 1;
       pendingAction = null;
+      scheduleSave(); render();
+    },
+
+    setTeamName: function(v){ state.teamName = v; scheduleSave(); },
+    // Committed on blur/step rather than per keystroke, so a half-typed "1" doesn't
+    // briefly clamp to 1 and repaint every row.
+    commitNumber: function(field, v){
+      var hi = field === 'onField' ? 30 : 99;
+      state[field] = clampInt(v, 1, hi, state[field]);   // bad input keeps the old value
+      scheduleSave(); render();
+    },
+    stepNumber: function(field, delta){
+      var hi = field === 'onField' ? 30 : 99;
+      state[field] = clampInt(state[field] + delta, 1, hi, state[field]);
       scheduleSave(); render();
     },
 
@@ -1128,12 +1179,13 @@
 
   function renderMain(){
     var count = state.selected.length;
-    var statusCls = count === 11 ? 'ready' : 'short';
-    var statusTxt = count === 11
-      ? '&#10003; 11 selected — Ready'
-      : count > 11
-        ? (count + '/11 selected — ' + (count - 11) + ' too many')
-        : (count + '/11 selected — ' + (11 - count) + ' short');
+    var statusCls = count === onField() ? 'ready' : 'short';
+    var N = onField();
+    var statusTxt = count === N
+      ? '&#10003; ' + N + ' selected — Ready'
+      : count > N
+        ? (count + '/' + N + ' selected — ' + (count - N) + ' too many')
+        : (count + '/' + N + ' selected — ' + (N - count) + ' short');
 
     var luButtons = LINEUPS.map(function(k){
       var n = state.players.filter(function(p){ return p[k]; }).length;
@@ -1149,7 +1201,7 @@
       listHtml = players.map(function(p){
         var sel = state.selected.indexOf(p.id) > -1;
         var col = statusColor(p.plays);
-        var need = 14 - p.plays;
+        var need = minPlays() - p.plays;
         var needTxt = need <= 0
           ? '<span class="need done">&#10003; Done</span>'
           : '<span class="need">' + need + ' more</span>';
@@ -1190,7 +1242,7 @@
         '<div class="status ' + statusCls + '">' +
           '<span>' + statusTxt + '</span>' +
           '<span class="statusright">' +
-            '<span class="n">' + count + '/11</span>' +
+            '<span class="n">' + count + '/' + N + '</span>' +
             (count ? '<button class="clear-btn" onclick="app.clearSelection()">Clear Selection</button>' : '') +
           '</span>' +
         '</div>' +
@@ -1206,8 +1258,8 @@
       '<div class="list">' + listHtml + '</div>' +
       '<div class="footer">' +
         '<button class="btn-undo" ' + (state.history.length?'':'disabled') + ' onclick="app.undo()">Undo</button>' +
-        '<button class="btn-snap" ' + (count && count <= 11 ? '' : 'disabled') + ' onclick="app.snap()">' +
-          (count > 11 ? 'TOO MANY' : 'SNAP') +
+        '<button class="btn-snap" ' + (count && count <= N ? '' : 'disabled') + ' onclick="app.snap()">' +
+          (count > N ? 'TOO MANY' : 'SNAP') +
         '</button>' +
       '</div>';
   }
@@ -1215,7 +1267,7 @@
   function renderSettings(){
     var summary = LINEUPS.map(function(k){
       var n = state.players.filter(function(p){ return p[k]; }).length;
-      return '<div class="schip ' + (n===11?'full':n>11?'over':'') + '"><b>' + n + '/11</b><span>' + k + '</span></div>';
+      return '<div class="schip ' + (n===onField()?'full':n>onField()?'over':'') + '"><b>' + n + '/' + onField() + '</b><span>' + k + '</span></div>';
     }).join('');
 
     var rows = state.players.slice().sort(function(a,b){
@@ -1223,7 +1275,7 @@
     }).map(function(p){
       var chips = LINEUPS.map(function(k){
         var on = p[k];
-        var full = !on && state.players.filter(function(pp){ return pp[k]; }).length >= 11;
+        var full = !on && state.players.filter(function(pp){ return pp[k]; }).length >= onField();
         return '<button class="chip ' + (on?'on':'') + (full?' disabled':'') + '" ' +
           'onclick="app.toggleLineup(\'' + p.id + '\',\'' + k + '\')">' + k + '</button>';
       }).join('');
@@ -1249,6 +1301,29 @@
         (pendingAction==='newgame' ? '\u26A0 Tap again to reset all play counts to 0' : '\u21BB Start new game (reset all play counts)') +
       '</button>' +
       (pendingAction==='newgame' ? '<button class="newgame cancel" onclick="app.cancelPending()">Cancel</button>' : '') +
+      '<div class="sectitle">Team setup</div>' +
+      '<div class="sheetbox panel' + (panelOpen('config') ? ' open' : '') + '">' +
+        '<button class="panelhead" onclick="app.togglePanel(\'config\')">' +
+          '<span>' + esc(teamName()) + ' \u00B7 ' + minPlays() + ' min \u00B7 ' + onField() + ' on field</span>' + icn(ICONS.chev) +
+        '</button>' +
+        (panelOpen('config') ? '<div class="panelbody">' +
+          '<label class="cfgrow"><span>Team name<small>Used on shared reports</small></span>' +
+            '<input class="cfgtext" id="cfg-team" value="' + esc(state.teamName) + '" placeholder="Team name" maxlength="40"></label>' +
+          '<label class="cfgrow"><span>Minimum plays<small>Per player, per game</small></span>' +
+            '<span class="stepper">' +
+              '<button onclick="app.stepNumber(\'minPlays\',-1)" aria-label="Fewer">\u2212</button>' +
+              '<input id="cfg-min" inputmode="numeric" value="' + minPlays() + '">' +
+              '<button onclick="app.stepNumber(\'minPlays\',1)" aria-label="More">+</button>' +
+            '</span></label>' +
+          '<label class="cfgrow"><span>Players on field<small>Per lineup</small></span>' +
+            '<span class="stepper">' +
+              '<button onclick="app.stepNumber(\'onField\',-1)" aria-label="Fewer">\u2212</button>' +
+              '<input id="cfg-field" inputmode="numeric" value="' + onField() + '">' +
+              '<button onclick="app.stepNumber(\'onField\',1)" aria-label="More">+</button>' +
+            '</span></label>' +
+          '<p class="cfgnote">Changes apply everywhere at once \u2014 the ready indicator, lineup limits, \u201Cdone\u201D coloring, and exports.</p>' +
+        '</div>' : '') +
+      '</div>' +
       '<div class="sectitle">Import / export roster</div>' +
       '<div class="sheetbox panel' + (panelOpen('paste') ? ' open' : '') + '">' +
         '<button class="panelhead" onclick="app.togglePanel(\'paste\')">' +
@@ -1302,7 +1377,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v34 \u00B7 <button class="updatelink" onclick="app.checkUpdate()">Check for updates</button>' +
+      '<div class="buildtag">Build v35 \u00B7 <button class="updatelink" onclick="app.checkUpdate()">Check for updates</button>' +
         (updateMsg ? '<br><span class="updatemsg">' + esc(updateMsg) + '</span>' : '') +
         (showForce ? '<br><button class="updatelink force" onclick="app.forceRefresh()">Still stale? Force refresh (needs connection)</button>' : '') +
         '<br><span class="diag">' + diagLine() + '</span></div>' +
@@ -1382,6 +1457,7 @@
       if (p){ p[field] = t.value; scheduleSave(); }
     }
     if (t.id === 'paste-data'){ pasteDraft = t.value; }
+    if (t.id === 'cfg-team'){ app.setTeamName(t.value); }
   });
 
   // Reads a picked roster file entirely on-device — nothing is uploaded anywhere.
@@ -1403,6 +1479,19 @@
     reader.readAsText(f);
   });
 
+  // Number fields commit when the user leaves them or presses Enter, so typing
+  // an intermediate value never fights the clamp.
+  document.getElementById('app').addEventListener('change', function(e){
+    var t = e.target;
+    if (t.id === 'cfg-min') app.commitNumber('minPlays', t.value);
+    if (t.id === 'cfg-field') app.commitNumber('onField', t.value);
+  });
+  document.getElementById('app').addEventListener('keydown', function(e){
+    if (e.key !== 'Enter') return;
+    var t = e.target;
+    if (t.id === 'cfg-min' || t.id === 'cfg-field'){ e.preventDefault(); t.blur(); }
+  });
+
   // ---------- init ----------
   storage.get().then(function(raw){
     if (raw){
@@ -1417,6 +1506,9 @@
           state.quarter = loaded.quarter >= 1 && loaded.quarter <= 4 ? loaded.quarter : 1;
           state.quarterSnaps = Array.isArray(loaded.quarterSnaps) && loaded.quarterSnaps.length === 4
             ? loaded.quarterSnaps : [0,0,0,0];
+          state.teamName = typeof loaded.teamName === 'string' ? loaded.teamName : 'Wilton Warriors';
+          state.minPlays = clampInt(loaded.minPlays, 1, 99, 14);
+          state.onField = clampInt(loaded.onField, 1, 30, 11);
           // Rosters saved before quarters existed have no per-quarter split; bank
           // their existing total into Q1 so the quarters still add up to the total.
           state.players.forEach(function(p){
