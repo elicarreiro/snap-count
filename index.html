@@ -174,6 +174,11 @@
   .editrow:last-child{border-bottom:none;}
   .editq{font-family:'Oswald';font-weight:600;font-size:15px;color:var(--muted);letter-spacing:.3px;}
   .editrow.now .editq{color:var(--flag);}
+  .editq small{display:block;font-family:'Inter';font-weight:500;font-size:10.5px;color:var(--muted);
+    letter-spacing:0;margin-top:1px;opacity:.85;}
+  .editrow.over .editval{color:var(--red);}
+  .editrow.over .editq small{color:var(--red);opacity:1;}
+  .editnote.err{color:var(--red) !important;}
   .editval{min-width:42px;text-align:center;font-family:'Oswald';font-weight:700;font-size:20px;color:var(--chalk);}
   .stepper button:disabled{opacity:.3;}
   .editrow.total .editq{color:var(--chalk);}
@@ -941,12 +946,18 @@
     },
     editStep: function(i, d){
       if (!editDraft) return;
-      editDraft.q[i] = Math.max(0, Math.min(999, editDraft.q[i] + d));
+      var cap = state.quarterSnaps[i] || 0;
+      var v = editDraft.q[i] + d;
+      // + never goes past the quarter's team snaps; - always works, so an
+      // already-over value can be brought back down
+      if (d > 0 && v > cap) return;
+      editDraft.q[i] = Math.max(0, v);
       render();
     },
     cancelEdit: function(){ editDraft = null; render(); },
     saveEdit: function(){
       if (!editDraft) return;
+      if (editDraft.q.some(function(v,i){ return v > (state.quarterSnaps[i] || 0); })) return;
       var p = find(editDraft.id);
       if (p){
         p.q = editDraft.q.slice();
@@ -1429,7 +1440,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v37 \u00B7 <button class="updatelink" onclick="app.checkUpdate()">Check for updates</button>' +
+      '<div class="buildtag">Build v38 \u00B7 <button class="updatelink" onclick="app.checkUpdate()">Check for updates</button>' +
         (updateMsg ? '<br><span class="updatemsg">' + esc(updateMsg) + '</span>' : '') +
         (showForce ? '<br><button class="updatelink force" onclick="app.forceRefresh()">Still stale? Force refresh (needs connection)</button>' : '') +
         '<br><span class="diag">' + diagLine() + '</span></div>' +
@@ -1480,6 +1491,9 @@
         var etot = editDraft.q.reduce(function(a,b){ return a + b; }, 0);
         var ecol = statusColor(etot);
         var changed = etot !== ep.plays || editDraft.q.some(function(v,i){ return v !== (ep.q||[0,0,0,0])[i]; });
+        var overQ = [];
+        editDraft.q.forEach(function(v,i){ if (v > (state.quarterSnaps[i] || 0)) overQ.push(i); });
+        var canSave = changed && !overQ.length;
         extra += '<div class="overlay" onclick="app.cancelEdit()">' +
           '<div class="sheet" onclick="event.stopPropagation()">' +
             '<div class="edithead">' +
@@ -1488,22 +1502,27 @@
             '</div>' +
             '<div class="editrows">' +
               editDraft.q.map(function(v, i){
-                return '<div class="editrow' + (state.quarter===i+1?' now':'') + '">' +
-                  '<span class="editq">Q' + (i+1) + '</span>' +
+                var cap = state.quarterSnaps[i] || 0;
+                var over = v > cap;
+                return '<div class="editrow' + (state.quarter===i+1?' now':'') + (over?' over':'') + '">' +
+                  '<span class="editq">Q' + (i+1) + '<small>' + cap + ' team snap' + (cap===1?'':'s') + '</small></span>' +
                   '<span class="stepper">' +
                     '<button onclick="app.editStep(' + i + ',-1)" aria-label="Q' + (i+1) + ' minus one"' + (v ? '' : ' disabled') + '>\u2212</button>' +
                     '<span class="editval">' + v + '</span>' +
-                    '<button onclick="app.editStep(' + i + ',1)" aria-label="Q' + (i+1) + ' plus one">+</button>' +
+                    '<button onclick="app.editStep(' + i + ',1)" aria-label="Q' + (i+1) + ' plus one"' + (v < cap ? '' : ' disabled') + '>+</button>' +
                   '</span>' +
                 '</div>';
               }).join('') +
               '<div class="editrow total">' +
-                '<span class="editq">Total</span>' +
+                '<span class="editq">Total<small>of ' + state.totalSnaps + ' team snaps</small></span>' +
                 '<span class="edittot count ' + ecol + '">' + etot + '</span>' +
               '</div>' +
             '</div>' +
-            '<p class="editnote">Corrects this player only. Team snap totals are unchanged.</p>' +
-            '<button class="impbtn wide editsave"' + (changed ? '' : ' disabled') + ' onclick="app.saveEdit()">Save changes</button>' +
+            (overQ.length
+              ? '<p class="editnote err">' + overQ.map(function(i){ return 'Q' + (i+1); }).join(', ') +
+                ' can\u2019t be more than the team\u2019s snaps in that quarter. Lower ' + (overQ.length===1?'it':'them') + ' to save.</p>'
+              : '<p class="editnote">Can\u2019t exceed the team\u2019s snaps in each quarter. Team totals are unchanged.</p>') +
+            '<button class="impbtn wide editsave"' + (canSave ? '' : ' disabled') + ' onclick="app.saveEdit()">Save changes</button>' +
             '<button class="impbtn ghostwide" onclick="app.cancelEdit()">Cancel</button>' +
           '</div>' +
         '</div>';
@@ -1661,6 +1680,10 @@
           state.players.forEach(function(p){
             if (!Array.isArray(p.q) || p.q.length !== 4){ p.q = [p.plays || 0, 0, 0, 0]; }
           });
+          // Same for the team: a game saved before quarters existed has a total but no
+          // split. Bank it into Q1 so quarter totals add up and match the players'.
+          var qsum = state.quarterSnaps.reduce(function(a,b){ return a + b; }, 0);
+          if (qsum < state.totalSnaps){ state.quarterSnaps[0] += state.totalSnaps - qsum; }
         }
       }catch(e){}
     }
