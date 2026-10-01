@@ -160,6 +160,28 @@
   .row{display:flex;align-items:center;gap:10px;background:var(--surface);border:2px solid var(--line);
     border-radius:13px;padding:10px 12px;margin-bottom:8px;}
   .row.sel{border-color:var(--flag);background:var(--surface-2);}
+  /* stop iOS's own long-press (text selection, callout) from fighting the custom one */
+  .row{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation;
+    transition:transform .45s ease, background-color .45s ease;}
+  .row.pressing{transform:scale(.975);background:var(--surface-2);}
+  .listhint{text-align:center;font-size:11px;color:var(--muted);opacity:.6;padding:6px 0 4px;}
+  .edithead{display:flex;align-items:baseline;gap:10px;margin-bottom:10px;}
+  .editjersey{font-family:'Oswald';font-weight:700;font-size:22px;color:var(--flag);}
+  .editname{font-size:17px;font-weight:700;color:var(--chalk);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .editrows{border:1px solid var(--line);border-radius:12px;padding:2px 12px;}
+  .editrow{display:flex;align-items:center;justify-content:space-between;padding:8px 0;
+    border-bottom:1px solid var(--line);}
+  .editrow:last-child{border-bottom:none;}
+  .editq{font-family:'Oswald';font-weight:600;font-size:15px;color:var(--muted);letter-spacing:.3px;}
+  .editrow.now .editq{color:var(--flag);}
+  .editval{min-width:42px;text-align:center;font-family:'Oswald';font-weight:700;font-size:20px;color:var(--chalk);}
+  .stepper button:disabled{opacity:.3;}
+  .editrow.total .editq{color:var(--chalk);}
+  .edittot{font-size:26px !important;margin-right:4px;}
+  .editnote{margin:10px 2px 0 !important;font-size:11.5px !important;color:var(--muted);}
+  .sheet .impbtn.wide.editsave{width:100%;margin-top:10px;padding:12px;border-radius:10px;background:var(--flag);
+    color:#1A1300;border:none;font-weight:700;font-size:14.5px;}
+  .sheet .impbtn.wide.editsave:disabled{opacity:.4;}
   .jersey{font-family:'Oswald';font-weight:700;font-size:19px;width:36px;text-align:center;color:var(--muted);
     flex-shrink:0;}
   .row.sel .jersey{color:var(--flag);}
@@ -360,6 +382,7 @@
   var shareOpen = false;
   var preparedImage = null;   // rendered when the share sheet opens, so a tap can share instantly
   var imagePreview = null;
+  var editDraft = null;            // { id, q:[..] } while the per-player editor is open
   var swReg = null;                 // service worker registration, once it resolves
   var reloadingForUpdate = false;
   var updateMsg = null;             // text shown next to the build tag
@@ -909,6 +932,30 @@
       prepareImage().then(function(img){ preparedImage = img; }).catch(function(){});
     },
     closeImagePreview: function(){ imagePreview = null; render(); },
+
+    // ---- per-player count editor (opened by long-press on a row) ----
+    openEditor: function(id){
+      var p = find(id); if (!p) return;
+      editDraft = { id: id, q: (p.q || [0,0,0,0]).slice() };
+      render();
+    },
+    editStep: function(i, d){
+      if (!editDraft) return;
+      editDraft.q[i] = Math.max(0, Math.min(999, editDraft.q[i] + d));
+      render();
+    },
+    cancelEdit: function(){ editDraft = null; render(); },
+    saveEdit: function(){
+      if (!editDraft) return;
+      var p = find(editDraft.id);
+      if (p){
+        p.q = editDraft.q.slice();
+        p.plays = p.q.reduce(function(a,b){ return a + b; }, 0);
+        toast(p.name + ' updated');
+      }
+      editDraft = null;
+      scheduleSave(); render();
+    },
     closeShare: function(){ shareOpen = false; render(); },
 
     shareVia: async function(how){
@@ -982,9 +1029,11 @@
       last.ids.forEach(function(id){
         var p = find(id);
         if (p){
-          p.plays = Math.max(0, p.plays - 1);
           if (!p.q) p.q = [0,0,0,0];
           p.q[qi] = Math.max(0, p.q[qi] - 1);
+          // derive the total rather than decrementing it, so a manual edit to this
+          // quarter can't leave the total and the quarter split disagreeing
+          p.plays = p.q.reduce(function(a,b){ return a + b; }, 0);
         }
       });
       state.totalSnaps = Math.max(0, state.totalSnaps - 1);
@@ -1210,7 +1259,7 @@
         var qline = (p.q || [0,0,0,0]).map(function(v, i){
           return '<span class="qcell' + (state.quarter===i+1?' now':'') + '">Q' + (i+1) + '<b>' + v + '</b></span>';
         }).join('');
-        return '<div class="row ' + (sel?'sel':'') + '" onclick="app.toggleSelect(\'' + p.id + '\')">' +
+        return '<div class="row ' + (sel?'sel':'') + '" data-pid="' + p.id + '" onclick="app.toggleSelect(\'' + p.id + '\')">' +
           '<div class="jersey">' + esc(p.number||'—') + '</div>' +
           '<div class="pinfo">' +
             '<div class="pname"><span class="nametext">' + esc(p.name) + '</span>' + needTxt + '</div>' +
@@ -1218,7 +1267,8 @@
           '</div>' +
           '<div class="countwrap"><div class="count ' + col + '">' + p.plays + '</div><div class="countlbl">plays</div></div>' +
         '</div>';
-      }).join('');
+      }).join('') +
+      '<div class="listhint">Long press to edit a player\u2019s counts</div>';
     }
 
     document.getElementById('app').innerHTML =
@@ -1379,7 +1429,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v36 \u00B7 <button class="updatelink" onclick="app.checkUpdate()">Check for updates</button>' +
+      '<div class="buildtag">Build v37 \u00B7 <button class="updatelink" onclick="app.checkUpdate()">Check for updates</button>' +
         (updateMsg ? '<br><span class="updatemsg">' + esc(updateMsg) + '</span>' : '') +
         (showForce ? '<br><button class="updatelink force" onclick="app.forceRefresh()">Still stale? Force refresh (needs connection)</button>' : '') +
         '<br><span class="diag">' + diagLine() + '</span></div>' +
@@ -1422,6 +1472,42 @@
           '<button class="impbtn ghostwide" onclick="app.closeShare()">Cancel</button>' +
         '</div>' +
       '</div>';
+    }
+    if (editDraft){
+      var ep = find(editDraft.id);
+      if (!ep){ editDraft = null; }
+      else {
+        var etot = editDraft.q.reduce(function(a,b){ return a + b; }, 0);
+        var ecol = statusColor(etot);
+        var changed = etot !== ep.plays || editDraft.q.some(function(v,i){ return v !== (ep.q||[0,0,0,0])[i]; });
+        extra += '<div class="overlay" onclick="app.cancelEdit()">' +
+          '<div class="sheet" onclick="event.stopPropagation()">' +
+            '<div class="edithead">' +
+              '<span class="editjersey">' + esc(ep.number || '\u2014') + '</span>' +
+              '<span class="editname">' + esc(ep.name) + '</span>' +
+            '</div>' +
+            '<div class="editrows">' +
+              editDraft.q.map(function(v, i){
+                return '<div class="editrow' + (state.quarter===i+1?' now':'') + '">' +
+                  '<span class="editq">Q' + (i+1) + '</span>' +
+                  '<span class="stepper">' +
+                    '<button onclick="app.editStep(' + i + ',-1)" aria-label="Q' + (i+1) + ' minus one"' + (v ? '' : ' disabled') + '>\u2212</button>' +
+                    '<span class="editval">' + v + '</span>' +
+                    '<button onclick="app.editStep(' + i + ',1)" aria-label="Q' + (i+1) + ' plus one">+</button>' +
+                  '</span>' +
+                '</div>';
+              }).join('') +
+              '<div class="editrow total">' +
+                '<span class="editq">Total</span>' +
+                '<span class="edittot count ' + ecol + '">' + etot + '</span>' +
+              '</div>' +
+            '</div>' +
+            '<p class="editnote">Corrects this player only. Team snap totals are unchanged.</p>' +
+            '<button class="impbtn wide editsave"' + (changed ? '' : ' disabled') + ' onclick="app.saveEdit()">Save changes</button>' +
+            '<button class="impbtn ghostwide" onclick="app.cancelEdit()">Cancel</button>' +
+          '</div>' +
+        '</div>';
+      }
     }
     if (imagePreview){
       extra += '<div class="overlay" onclick="app.closeImagePreview()">' +
@@ -1492,6 +1578,65 @@
     if (e.key !== 'Enter') return;
     var t = e.target;
     if (t.id === 'cfg-min' || t.id === 'cfg-field'){ e.preventDefault(); t.blur(); }
+  });
+
+  // ---------- long-press on a player row ----------
+  // iOS has no dependable long-press event, so it's timed by hand: hold ~480ms without
+  // moving more than a few px. Moving (scrolling) or lifting early cancels it.
+  var LP_MS = 480, LP_SLOP = 10;
+  var lp = null;                 // { id, x, y, timer, row }
+  var swallowClick = false;      // eats the tap that ends a long-press
+
+  function lpCancel(){
+    if (!lp) return;
+    clearTimeout(lp.timer);
+    if (lp.row) lp.row.classList.remove('pressing');
+    lp = null;
+  }
+  var appEl = document.getElementById('app');
+  appEl.addEventListener('pointerdown', function(e){
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    var row = e.target.closest && e.target.closest('.row[data-pid]');
+    if (!row) return;
+    lpCancel();
+    lp = { id: row.getAttribute('data-pid'), x: e.clientX, y: e.clientY, row: row };
+    row.classList.add('pressing');
+    lp.timer = setTimeout(function(){
+      var id = lp && lp.id;
+      lpCancel();
+      if (!id) return;
+      swallowClick = true;
+      setTimeout(function(){ swallowClick = false; }, 700);
+      haptic();
+      app.openEditor(id);
+    }, LP_MS);
+  });
+  appEl.addEventListener('pointermove', function(e){
+    if (!lp) return;
+    if (Math.abs(e.clientX - lp.x) > LP_SLOP || Math.abs(e.clientY - lp.y) > LP_SLOP) lpCancel();
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
+    appEl.addEventListener(ev, lpCancel);
+  });
+  appEl.addEventListener('scroll', lpCancel, true);
+  // Capture phase, so the swallowed tap never reaches the row's own onclick
+  document.addEventListener('click', function(e){
+    if (!swallowClick) return;
+    if (e.target.closest && e.target.closest('.row[data-pid]')){
+      e.stopPropagation(); e.preventDefault();
+      swallowClick = false;
+    }
+  }, true);
+  // Android and desktop fire contextmenu on long-press/right-click: suppress the menu,
+  // and on desktop treat right-click as "edit"
+  appEl.addEventListener('contextmenu', function(e){
+    var row = e.target.closest && e.target.closest('.row[data-pid]');
+    if (!row) return;
+    e.preventDefault();
+    if (e.pointerType === 'mouse' || (e.button === 2)){ lpCancel(); app.openEditor(row.getAttribute('data-pid')); }
+  });
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && editDraft) app.cancelEdit();
   });
 
   // ---------- init ----------
