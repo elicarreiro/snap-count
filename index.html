@@ -37,6 +37,10 @@
      is enough to stop page scrolling. Background matches the footer so any residual
      strip blends instead of reading as a black band. */
   html,body{height:100%;}
+  /* Stop stray taps from selecting text or popping iOS's callout menu anywhere in the
+     app. Fields you type in, and text meant to be copied, opt back in below. */
+  body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;}
+  input,textarea,[contenteditable]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;}
   body{margin:0;padding:0;background:var(--surface);color:var(--chalk);
     font-family:'Inter',system-ui,-apple-system,sans-serif; overscroll-behavior:none;
     overflow:hidden;}
@@ -106,7 +110,7 @@
     border-radius:9px;color:var(--chalk);padding:10px;font-size:12.5px;
     font-family:ui-monospace,Menlo,monospace;white-space:pre;resize:vertical;}
   .imgpreview{display:block;width:100%;max-height:62vh;object-fit:contain;border-radius:8px;
-    background:#fff;-webkit-touch-callout:default;user-select:auto;}
+    background:#fff;-webkit-touch-callout:default;-webkit-user-select:auto;user-select:auto;}
   .sheettitle{font-family:'Oswald';font-weight:700;font-size:16px;margin-bottom:12px;letter-spacing:.3px;}
   .sharelist{display:flex;flex-direction:column;gap:7px;}
   .shareopt{display:flex;align-items:center;gap:11px;width:100%;padding:13px 14px;border-radius:11px;
@@ -1440,7 +1444,7 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v40 \u00B7 <button class="updatelink" onclick="app.checkUpdate()">Check for updates</button>' +
+      '<div class="buildtag">Build v41 \u00B7 <button class="updatelink" onclick="app.checkUpdate()">Check for updates</button>' +
         (updateMsg ? '<br><span class="updatemsg">' + esc(updateMsg) + '</span>' : '') +
         (showForce ? '<br><button class="updatelink force" onclick="app.forceRefresh()">Still stale? Force refresh (needs connection)</button>' : '') +
         '<br><span class="diag">' + diagLine() + '</span></div>' +
