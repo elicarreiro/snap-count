@@ -267,6 +267,27 @@
     border-radius:9px;color:var(--chalk);padding:8px 0;font-size:15px;font-weight:700;
     font-family:'Oswald',inherit;}
   .cfgnote{margin:10px 0 0 !important;font-size:11.5px !important;line-height:1.5;}
+  .helplink{display:flex;align-items:center;gap:11px;width:calc(100% - 28px);margin:0 14px 10px;
+    padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);
+    color:var(--chalk);text-align:left;font-size:14px;font-weight:600;}
+  .helplink > span{flex:1;min-width:0;}
+  .helplink svg:first-child{flex-shrink:0;color:var(--flag);}
+  .helplink svg:last-child{flex-shrink:0;color:var(--muted);}
+  .helplink small{display:block;font-size:11.5px;font-weight:500;color:var(--muted);margin-top:2px;}
+  .helplink:active{transform:scale(.98);}
+  .help{padding:6px 18px 48px;color:var(--chalk);font-size:14.5px;line-height:1.55;}
+  .help h2{font-family:'Oswald';font-weight:700;font-size:17px;letter-spacing:.3px;color:var(--flag);
+    margin:22px 0 6px;text-transform:uppercase;}
+  .help h2:first-child{margin-top:8px;}
+  .help h3{font-size:14.5px;font-weight:700;margin:14px 0 2px;}
+  .help p{margin:6px 0;}
+  .help .lede{color:var(--muted);margin-top:10px;}
+  .help ul,.help ol{margin:6px 0;padding-left:20px;}
+  .help li{margin:5px 0;}
+  .help b{color:var(--chalk);font-weight:700;}
+  .help .r{color:var(--red);font-weight:700;}
+  .help .o{color:var(--orange);font-weight:700;}
+  .help .g{color:var(--green);font-weight:700;}
   .exportbtn{display:flex;align-items:center;gap:11px;width:calc(100% - 28px);margin:0 14px 8px;
     padding:12px 14px;border-radius:12px;background:var(--surface);border:1px solid var(--line);
     color:var(--chalk);text-align:left;font-size:14px;font-weight:600;}
@@ -316,7 +337,6 @@
   .backrow{display:flex;align-items:center;gap:10px;}
   .buildtag{text-align:center;color:var(--muted);opacity:.55;font-size:11px;padding:14px 0 44px;
     letter-spacing:.06em;line-height:1.7;}
-  .diag{font-size:10px;opacity:.8;}
   .updatelink{background:none;border:none;padding:0;font-family:inherit;font-size:11px;
     color:var(--muted);text-decoration:underline;letter-spacing:.06em;}
   .updatelink.force{margin-top:5px;color:var(--orange);opacity:.9;}
@@ -331,6 +351,67 @@
 <!-- iOS has no Vibration API; toggling a switch control is what pokes the Taptic Engine -->
 <label id="haptic-label" for="haptic-switch" aria-hidden="true"><input type="checkbox" switch id="haptic-switch" tabindex="-1"></label>
 <input type="file" id="roster-file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" hidden>
+<template id="help-content">
+<p class="lede">Snap Count tracks how many plays each player gets so everyone reaches the league minimum. Select who is on the field, tap <b>Snap</b> after each play, and the app does the counting.</p>
+
+<h2>Before the first game</h2>
+<h3>Install it on your phone</h3>
+<p>Open the app link in Safari (iPhone) or Chrome (Android), then choose <b>Add to Home Screen</b> or <b>Install app</b>. Once installed it works with no signal, so it's ready at any field.</p>
+<h3>Set up your team</h3>
+<p>In Settings, open <b>Team setup</b> and enter your team name, the minimum plays per player, and how many players are on the field.</p>
+<h3>Add your roster</h3>
+<p>Choose one:</p>
+<ul>
+  <li><b>Paste from sheet:</b> copy your roster from a spreadsheet, header row included, and paste it in.</li>
+  <li><b>Upload CSV file:</b> pick a CSV with the columns Jersey #, Name, O1, O2, O3, D1, D2, D3.</li>
+  <li><b>Add player:</b> type a jersey number and name one at a time.</li>
+</ul>
+<h3>Build your lineups</h3>
+<p>Each player has O1, O2, O3, D1, D2 and D3 chips in Settings. Tap a chip to put that player in that group. The counts at the top of the Lineups section show how full each group is.</p>
+
+<h2>On game day</h2>
+<ol>
+  <li>In Settings, tap <b>Start new game</b> to reset everyone's counts to zero. Your roster and lineups stay.</li>
+  <li>Make sure <b>Q1</b> is selected at the top of the main screen.</li>
+  <li>Tap a lineup button (like <b>O1</b>) to put that whole group on the field.</li>
+  <li>After each play, tap <b>Snap</b>. Every selected player gets credit.</li>
+  <li>When the quarter changes, tap the next quarter tile.</li>
+</ol>
+<p>Your selection stays in place between plays, so you only change it when players actually change.</p>
+
+<h2>Reading the screen</h2>
+<ul>
+  <li><b>Status bar:</b> shows how many players are selected. Red means you're short or have too many. Green means you have exactly the right number and are ready.</li>
+  <li><b>Player counts:</b> the big number is each player's total. It turns <span class="r">red</span> when they're well short, <span class="o">orange</span> when they're close, and <span class="g">green</span> once they've reached the minimum.</li>
+  <li><b>"N more" / "Done":</b> shows how many plays each player still needs.</li>
+  <li><b>Quarter breakdown:</b> the small Q1 to Q4 numbers under each name show where their plays came from.</li>
+  <li><b>Quarter tiles:</b> each tile shows how many plays the team has run that quarter. The tile next to them shows the game total.</li>
+</ul>
+
+<h2>Tips</h2>
+<p><b>Let the list do the watching.</b> Keep the sort on <b>Plays</b> and the players who need snaps the most always sit at the top. A quick glance down the list tells you who to get in next.</p>
+<p><b>Substitute in two taps.</b> Tap the player coming off, then the player going in. Everyone else stays selected.</p>
+<p><b>Use lineups as a starting point.</b> Tap <b>O1</b>, then swap in a player or two. The lineup button stays lit only while the field exactly matches that group, so you always know whether you've made changes.</p>
+<p><b>Trust the Snap button.</b> It locks and reads <b>TOO MANY</b> if more players are selected than can be on the field, so you can't credit an extra player by mistake.</p>
+<p><b>Fix mistakes quickly.</b> <b>Undo</b> reverses the last snap. To correct one player's count, press and hold their row, adjust any quarter, and save.</p>
+<p><b>Check in before the fourth quarter.</b> Anyone still red or orange at the end of the third needs to be your priority.</p>
+<p><b>Clear the field fast.</b> <b>Clear Selection</b> in the status bar deselects everyone at once. <b>Select All</b> picks everyone, which is handy as a starting point to deselect from.</p>
+
+<h2>After the game</h2>
+<p>Tap the share icon at the top to send results:</p>
+<ul>
+  <li><b>Share as image:</b> a clean, color-coded table of every player's plays by quarter. Great for texting coaches or parents.</li>
+  <li><b>Copy to clipboard</b> or <b>Share:</b> a text version.</li>
+  <li><b>Save as CSV:</b> the counts in spreadsheet form, for your records.</li>
+</ul>
+
+<h2>Good to know</h2>
+<ul>
+  <li><b>Your roster stays on your phone.</b> Player names and play counts are never uploaded or shared.</li>
+  <li><b>Back up your roster.</b> Settings has <b>Download roster CSV</b>. Save a copy, since deleting the app or clearing browser data erases everything stored on the phone.</li>
+  <li><b>Updates install themselves</b> the next time you open the app with a connection. To check manually, tap <b>Check for updates</b> at the bottom of Settings.</li>
+</ul>
+</template>
 
 <script>
 (function(){
@@ -423,7 +504,9 @@
     settings: '<path d="M4 7h10"></path><path d="M18 7h2"></path><path d="M4 17h6"></path><path d="M14 17h6"></path>' +
               '<circle cx="16" cy="7" r="2.2"></circle><circle cx="12" cy="17" r="2.2"></circle>',
     back:  '<path d="M15 5l-7 7 7 7"></path>',
-    chev:  '<path d="M6 9l6 6 6-6"></path>'
+    chev:  '<path d="M6 9l6 6 6-6"></path>',
+    fwd:   '<path d="M9 5l7 7-7 7"></path>',
+    help:  '<circle cx="12" cy="12" r="9"></circle><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"></path><path d="M12 17.2h.01"></path>'
   };
 
   // Haptic tap. Android/Chrome has the Vibration API; iOS Safari never implemented it,
@@ -479,8 +562,6 @@
       r.kept + ' kept with play counts, ' + r.removed + ' removed).' + overNote(r);
   }
 
-  // Temporary: reports the real measurements so bottom-spacing issues can be
-  // diagnosed on-device instead of guessed at. Safe to remove.
   // Safety net for the 100vh gamble: if the shell ends up taller than the window,
   // the footer would sit off-screen. Clamp it to the measured height in that case.
   function fitShell(){
@@ -494,34 +575,6 @@
   }
   window.addEventListener('resize', fitShell);
   window.addEventListener('orientationchange', function(){ setTimeout(fitShell, 120); });
-
-  function diagLine(){
-    try{
-      var app = document.getElementById('app');
-      var cs = getComputedStyle(document.documentElement);
-      var probe = document.createElement('div');
-      probe.style.cssText = 'position:fixed;bottom:0;height:env(safe-area-inset-bottom);width:1px;';
-      document.body.appendChild(probe);
-      var inset = Math.round(probe.getBoundingClientRect().height);
-      probe.remove();
-      var standalone = (window.navigator.standalone === true) ||
-        (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
-      var appH = app ? Math.round(app.getBoundingClientRect().height) : 0;
-      var foot = document.querySelector('.footer');
-      var footBottom = foot ? Math.round(foot.getBoundingClientRect().bottom) : 0;
-      var vv = window.visualViewport ? Math.round(window.visualViewport.height) : 0;
-      var probeTop = document.createElement('div');
-      probeTop.style.cssText = 'position:fixed;top:0;height:env(safe-area-inset-top);width:1px;';
-      document.body.appendChild(probeTop);
-      var insetTop = Math.round(probeTop.getBoundingClientRect().height);
-      probeTop.remove();
-      return 'screen ' + window.screen.height + ' · inner ' + window.innerHeight +
-             ' · visual ' + vv + ' · app ' + appH +
-             ' · footBottom ' + footBottom +
-             ' · insetT ' + insetTop + ' insetB ' + inset +
-             ' · ' + (standalone ? 'installed' : 'browser');
-    } catch(e){ return ''; }
-  }
 
   function todayStr(){
     return new Date().toLocaleDateString('en-US', { month:'long', day:'numeric', year:'numeric' });
@@ -915,6 +968,7 @@
   var app = {
     goSettings: function(){ state.screen = 'settings'; render(); },
     goMain: function(){ state.screen = 'main'; render(); },
+    goHelp: function(){ state.screen = 'help'; render(); },
 
     toggleSelect: function(id){
       var idx = state.selected.indexOf(id);
@@ -1364,6 +1418,9 @@
         '</div>' +
       '</div>' +
       '<div class="scrollbody">' +
+      '<button class="helplink" onclick="app.goHelp()">' + icn(ICONS.help) +
+        '<span>How to use Snap Count<small>Setup, game day, and tips</small></span>' + icn(ICONS.fwd) +
+      '</button>' +
       '<button class="newgame' + (pendingAction==='newgame'?' danger':'') + '" onclick="app.newGame()">' +
         (pendingAction==='newgame' ? '\u26A0 Tap again to reset all play counts to 0' : '\u21BB Start new game (reset all play counts)') +
       '</button>' +
@@ -1444,11 +1501,23 @@
       '</div>' +
       '<div class="sectitle">Roster (' + state.players.length + ')</div>' +
       '<div>' + (rows || '<div class="empty">No players yet — add your first one above.</div>') + '</div>' +
-      '<div class="buildtag">Build v41 \u00B7 <button class="updatelink" onclick="app.checkUpdate()">Check for updates</button>' +
+      '<div class="buildtag">Build v42 \u00B7 <button class="updatelink" onclick="app.checkUpdate()">Check for updates</button>' +
         (updateMsg ? '<br><span class="updatemsg">' + esc(updateMsg) + '</span>' : '') +
         (showForce ? '<br><button class="updatelink force" onclick="app.forceRefresh()">Still stale? Force refresh (needs connection)</button>' : '') +
-        '<br><span class="diag">' + diagLine() + '</span></div>' +
+        '</div>' +
       '</div>';
+  }
+
+  function renderHelp(){
+    var tpl = document.getElementById('help-content');
+    document.getElementById('app').innerHTML =
+      '<div class="hdr">' +
+        '<div class="backrow">' +
+          '<button class="backbtn" onclick="app.goSettings()" aria-label="Back">' + icn(ICONS.back) + '</button>' +
+          '<div class="brand"><b>HOW TO USE</b><span>Snap Count</span></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="scrollbody"><div class="help">' + (tpl ? tpl.innerHTML : '') + '</div></div>';
   }
 
   var renderedScreen = null;
@@ -1461,6 +1530,7 @@
     var sameScreen = renderedScreen === state.screen;
 
     if (state.screen === 'settings') renderSettings();
+    else if (state.screen === 'help') renderHelp();
     else renderMain();
     renderedScreen = state.screen;
 
